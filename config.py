@@ -7,11 +7,12 @@ RESULTS_PATH = 'Output'  # Folder location where to store the back testing outpu
 OUTPUT_FILE_FORMAT = ['xlsx']  # Preferred format(s) for the output: csv, xlsx or both. Ex: ['csv', 'xlsx']
 MIN_DATA_SIZE = 201  # Cannot run Strategy on data set less than this value
 
-##################################################################################
-### Get keys from the config file
-##################################################################################
-my_api_key = api_keys.API_KEY
-my_api_secret = api_keys.API_SECRET
-api_endpoint = 'https://api.bybit.com'
-# print(my_api_key)
-# print(my_api_secret)
+# Supported File Formats
+SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
+
+# Supported Exchange List
+SUPPORTED_EXCHANGES = ['ByBit']
+
+# Implemented Strategies
+IMPLEMENTED_STRATEGIES = ['MACD', 'MACD Precise']
+

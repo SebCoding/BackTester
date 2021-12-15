@@ -10,6 +10,7 @@ import config
 import stats
 import utils
 from params import validate_params, load_test_cases_from_file
+import ByBitExchange
 
 # Ignore warnings when reading xlsx file containing list of values for dropdown
 import warnings
@@ -18,63 +19,63 @@ warnings.filterwarnings('ignore')
 ##################################################################################
 ### Get Data from the ByBit API
 ##################################################################################
-def get_bybit_kline_data(test_num, symbol, from_time, to_time, interval, include_prior_200=True, write_to_file=True, verbose=True):
-    # Unauthenticated
-    # session_unauth = HTTP(endpoint=api_endpoint)
-
-    # Authenticated
-    session_auth = HTTP(
-        endpoint = config.api_endpoint,
-        api_key = config.my_api_key,
-        api_secret = config.my_api_secret
-    )
-
-    # The issue with ByBit API is that you can get a maximum of 200 bars from it.
-    # So if you need to get data for a large portion of the time you have to call it multiple times.
-
-    if verbose:
-        # print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
-        print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time}], To[{to_time}]')
-
-    df_list = []
-    start_time = from_time
-
-    # Adjust from_time to add 200 additional prior entries for ema200
-    if include_prior_200:
-        start_time = utils.adjust_from_time(from_time, interval)
-
-    last_datetime_stamp = start_time.timestamp()
-    to_time_stamp = to_time.timestamp()
-
-    while last_datetime_stamp < to_time_stamp:
-        # print(f'Fetching next 200 lines fromTime: {last_datetime_stamp} < to_time: {to_time}')
-        # print(f'Fetching next 200 lines fromTime: {dt.datetime.fromtimestamp(last_datetime_stamp)} < to_time: {dt.datetime.fromtimestamp(to_time)}')
-        result = session_auth.query_kline(symbol=symbol, interval=interval, **{'from': last_datetime_stamp})['result']
-        tmp_df = pd.DataFrame(result)
-
-        if tmp_df is None or (len(tmp_df.index) == 0):
-            break
-
-        tmp_df.index = [dt.datetime.fromtimestamp(x) for x in tmp_df.open_time]
-        # tmp_df.index = [dt.datetime.utcfromtimestamp(x) for x in tmp_df.open_time]
-        df_list.append(tmp_df)
-        last_datetime_stamp = float(max(tmp_df.open_time) + 1)  # Add 1 sec to last data received
-
-        # time.sleep(2) # Sleep for x seconds, to avoid being locked out
-
-    if df_list is None or len(df_list) == 0:
-        return None
-
-    df = pd.concat(df_list)
-
-    # Drop rows that have a timestamp greater than to_time
-    df = df[df.open_time <= int(to_time.timestamp())]
-
-    # Write to file
-    if write_to_file:
-        utils.save_dataframe2file(test_num, symbol, from_time, to_time, interval, df, True, True)
-
-    return df
+# def get_bybit_kline_data(test_num, symbol, from_time, to_time, interval, include_prior_200=True, write_to_file=True, verbose=True):
+#     # Unauthenticated
+#     # session_unauth = HTTP(endpoint=api_endpoint)
+#
+#     # Authenticated
+#     session_auth = HTTP(
+#         endpoint = config.api_endpoint,
+#         api_key = config.my_api_key,
+#         api_secret = config.my_api_secret
+#     )
+#
+#     # The issue with ByBit API is that you can get a maximum of 200 bars from it.
+#     # So if you need to get data for a large portion of the time you have to call it multiple times.
+#
+#     if verbose:
+#         # print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
+#         print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time}], To[{to_time}]')
+#
+#     df_list = []
+#     start_time = from_time
+#
+#     # Adjust from_time to add 200 additional prior entries for ema200
+#     if include_prior_200:
+#         start_time = utils.adjust_from_time(from_time, interval)
+#
+#     last_datetime_stamp = start_time.timestamp()
+#     to_time_stamp = to_time.timestamp()
+#
+#     while last_datetime_stamp < to_time_stamp:
+#         # print(f'Fetching next 200 lines fromTime: {last_datetime_stamp} < to_time: {to_time}')
+#         # print(f'Fetching next 200 lines fromTime: {dt.datetime.fromtimestamp(last_datetime_stamp)} < to_time: {dt.datetime.fromtimestamp(to_time)}')
+#         result = session_auth.query_kline(symbol=symbol, interval=interval, **{'from': last_datetime_stamp})['result']
+#         tmp_df = pd.DataFrame(result)
+#
+#         if tmp_df is None or (len(tmp_df.index) == 0):
+#             break
+#
+#         tmp_df.index = [dt.datetime.fromtimestamp(x) for x in tmp_df.open_time]
+#         # tmp_df.index = [dt.datetime.utcfromtimestamp(x) for x in tmp_df.open_time]
+#         df_list.append(tmp_df)
+#         last_datetime_stamp = float(max(tmp_df.open_time) + 1)  # Add 1 sec to last data received
+#
+#         # time.sleep(2) # Sleep for x seconds, to avoid being locked out
+#
+#     if df_list is None or len(df_list) == 0:
+#         return None
+#
+#     df = pd.concat(df_list)
+#
+#     # Drop rows that have a timestamp greater than to_time
+#     df = df[df.open_time <= int(to_time.timestamp())]
+#
+#     # Write to file
+#     if write_to_file:
+#         utils.save_dataframe2file(test_num, 'X', symbol, from_time, to_time, interval, df, True, True)
+#
+#     return df
 
 ##################################################################################
 ### Calculate the Indicators and Signals
@@ -135,14 +136,16 @@ def add_indicators_and_signals(params, df):
     # Remove nulls
     # df.dropna(inplace=True)
 
-    if params['Precision_Crossing']:
+    if params['Strategy'] == 'MACD Precise':
         # Enter trade on the same candle as the crossing
         df['trade_status'] = df.apply(lambda x: trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']),
                                       axis=1)
-    else:
+    elif params['Strategy'] == 'MACD':
         # Enter trade in the candle after the crossing
         df['trade_status'] = df.apply(lambda x: trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']),
                                       axis=1).shift(1)
+    else:
+        raise Exception(f'Aborting. Invalid Strategy: {params["Strategy"]}.')
 
     # Add and Initialize new columns
     df['entry_time'] = None
@@ -155,18 +158,16 @@ def add_indicators_and_signals(params, df):
 
     return df
 
-
-
 ##################################################################################
 ### Process Trades
 ##################################################################################
 # Find with a minute precision the first point where macd crossed macdsignal
 # and return the time and closing price for that point
-def find_crossing(df, symbol, from_time, to_time, delta=0):
+def find_crossing(my_exchange, df, symbol, from_time, to_time, delta=0):
     # We need to get an extra row to see the value at -1min in case the cross is on the first row
     to_time = to_time - dt.timedelta(minutes=1)
 
-    minutes_df = get_bybit_kline_data(0, symbol, from_time, to_time, 1, include_prior_200=False, write_to_file=False, verbose=True)
+    minutes_df = my_exchange.get_candle_data(0, symbol, from_time, to_time, "1", include_prior=0, write_to_file=False, verbose=True)
 
     # Only keep the close column
     minutes_df = minutes_df[['close']]
@@ -222,7 +223,7 @@ def find_crossing(df, symbol, from_time, to_time, delta=0):
 # ----------------------------------------------------------------------------
 # Process Trades: Add Trades to the Dataframe, write results to Excel files
 # ----------------------------------------------------------------------------
-def process_trades(params, df):
+def process_trades(params, my_exchange, df):
     #entry_time = None
     entry_price = 0.0
     stop_loss = 0.0
@@ -236,7 +237,7 @@ def process_trades(params, df):
     total_losses = 0.0
     total_fees_paid = 0.0
 
-    print(f'Processing Trades. Precision Crossing[{params["Precision_Crossing"]}]')
+    print(f'Processing Trades using strategy [{params["Strategy"]}]')
 
     # We use numeric indexing to update values in the DataFrame
     # Find the column indexes
@@ -260,15 +261,15 @@ def process_trades(params, df):
         if trade_status == '' and row.trade_status == 'Enter Long':
 
             # print(f'\nEntering Long: {row.Index}')
-            if params['Precision_Crossing']:
+            if params['Strategy'] == 'MACD Precise':
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=(utils.convert_interval_to_min(params['Interval'])))
-                entry_time, entry_price = find_crossing(df[['close']].iloc[0:i], params['Symbol'], start_time, end_time)
+                entry_time, entry_price = find_crossing(my_exchange, df[['close']].iloc[0:i], params['Symbol'], start_time, end_time)
                 df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')
-            else:
+            elif params['Strategy'] == 'MACD':
                 #start_time = None
                 entry_price = row.open
 
@@ -363,15 +364,15 @@ def process_trades(params, df):
         elif trade_status == '' and row.trade_status == 'Enter Short':
 
             # print(f'\nEntering Short: {row.Index}')
-            if params['Precision_Crossing']:
+            if params['Strategy'] == 'MACD Precise':
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=(utils.convert_interval_to_min(params['Interval'])))
-                entry_time, entry_price = find_crossing(df[['close']].iloc[0:i], params['Symbol'], start_time, end_time)
+                entry_time, entry_price = find_crossing(my_exchange, df[['close']].iloc[0:i], params['Symbol'], start_time, end_time)
                 df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')
-            else:
+            elif params['Strategy'] == 'MACD':
                 #start_time = None
                 entry_price = row.open
 
@@ -466,7 +467,8 @@ def process_trades(params, df):
     df = df.loc[df['macd'].apply(lambda x: x is not None)]
 
     # Save trade details to file
-    utils.save_dataframe2file(params['Test_Num'], params['Symbol'], params['From_Time'], params['To_Time'], params['Interval'], df, False, True)
+    utils.save_dataframe2file(params['Test_Num'], params['Exchange'], params['Symbol'], params['From_Time'],
+                              params['To_Time'], params['Interval'], df, False, False, True)
 
     max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(df)
 
@@ -488,6 +490,7 @@ def process_trades(params, df):
     params['Results'] = params['Results'].append(
         {
             'Test #': params['Test_Num'],
+            'Exchange': params['Exchange'],
             'Symbol': params['Symbol'],
             'From': params['From_Time'].strftime("%Y-%m-%d"),
             'To': params['To_Time'].strftime("%Y-%m-%d"),
@@ -497,7 +500,7 @@ def process_trades(params, df):
             'SL %': params['Stop_Loss_PCT'],
             'Maker Fee %': params['Maker_Fee_PCT'],
             'Taker Fee %': params['Taker_Fee_PCT'],
-            'Precision Crossing': params['Precision_Crossing'],
+            'Strategy': params['Strategy'],
 
             'Wins': nb_wins,
             'Losses': nb_losses,
@@ -515,18 +518,7 @@ def process_trades(params, df):
 
     return df
 
-##################################################################################
-###
-##################################################################################
-
-# def create_empty_results_df():
-#     df = pd.DataFrame(
-#         columns=['Test #', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
-#                  'Precision Crossing', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
-#                  'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
-#     return df
-
-# Run the backtesting
+# Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
     print(f'----------------------- TEST #{params["Test_Num"]} -----------------------')
     # print_parameters(params, True)
@@ -534,25 +526,26 @@ def backtest(params):
 
     # Method 1 (slow): Get historical data directly from the ByBit API
     # --------------------------------------------------------------------
-    df = get_bybit_kline_data(params['Test_Num'], params['Symbol'], params['From_Time'], params['To_Time'], params['Interval'])
+    my_exchange = ByBitExchange.ByBitExchange()
+    df = my_exchange.get_candle_data(params['Test_Num'], params['Symbol'],
+                                     params['From_Time'], params['To_Time'], params['Interval'],
+                                     include_prior=200, write_to_file=True, verbose=True)
     if df is None:
-        print(f'\nNo data was returned from ByBit. Unable to backtest strategy.')
-        raise Exception("No data returned by ByBit")
+        print(f'\nNo data was returned from {my_exchange.name}. Unable to backtest strategy.')
+        raise Exception(f"No data returned by {my_exchange.name}")
     elif len(df) <= config.MIN_DATA_SIZE:
         print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={config.MIN_DATA_SIZE}. Unable to backtest strategy.')
         raise Exception("Unable to Run Strategy on Data Set")
 
     # Method 2 (fast): Get historical data from previously saved files
     # --------------------------------------------------------------------
-    # filename = 'ByBitData\\BTCUSDT_2021-01-01_to_2021-11-27_30.xlsx'
+    # filename = config.HISTORICAL_FILES_PATH + '\\BTCUSDT_2021-01-01_to_2021-11-27_30.xlsx'
     # print(f'Reading data from file => [{filename}]')
-    # df = convertExcelToDataFrame(filename)
+    # df = utils.convert_excel_to_dataframe(filename)
 
     df = add_indicators_and_signals(params, df)
-    df = process_trades(params, df)
+    df = process_trades(params, my_exchange, df)
 
-    # for index, row in df.iterrows():
-    #     print(index, row['close'], row['macd'])
     return df
 
 ##################################################################################
@@ -566,8 +559,8 @@ def main():
 
     # Create DataFrame to store results
     results_df = pd.DataFrame(
-        columns=['Test #', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
-                 'Precision Crossing', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
+        columns=['Test #', 'Exchange', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
+                 'Strategy', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
                  'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
     # print(results_df.to_string())
 
@@ -575,6 +568,7 @@ def main():
     for index, row in test_cases_df.iterrows():
         params = {
             'Test_Num': index
+            , 'Exchange': row.Exchange
             , 'Symbol': row.Symbol
             , 'From_Time': row.From
             , 'To_Time': row.To
@@ -584,7 +578,7 @@ def main():
             , 'Stop_Loss_PCT': row['SL %']
             , 'Maker_Fee_PCT': row['Maker Fee %']
             , 'Taker_Fee_PCT': row['Taker Fee %']
-            , 'Precision_Crossing': row['Precision Crossing']
+            , 'Strategy': row['Strategy']
 
             , 'Results': results_df
         }
