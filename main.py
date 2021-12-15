@@ -1,112 +1,19 @@
 import datetime as dt
-import locale
-from datetime import timedelta
+
 
 import numpy as np
 import pandas as pd
 import talib
-from openpyxl import load_workbook
 from pybit import HTTP
 
 import config
+import stats
+import utils
+from params import validate_params, load_test_cases_from_file
 
+# Ignore warnings when reading xlsx file containing list of values for dropdown
 import warnings
 warnings.filterwarnings('ignore')
-
-
-
-##################################################################################
-### Change Timezone if Needed
-##################################################################################
-## my_list simply unpacks the list elements and pass each one of them as parameters to the print function
-# print(*pytz.all_timezones, sep='\n')
-
-# In windows command prompt try:
-#     This gives current timezone: tzutil /g
-#     This gives a list of timezones: tzutil /l
-#     This will set the timezone: tzutil /s "Central America Standard Time"
-
-#os.system('tzutil /s "Eastern Standard Time"')
-#os.system('tzutil /s "Singapore Standard Time"')
-#time.strftime('%Y-%m-
-
-##################################################################################
-### Utilities Functions
-##################################################################################
-# Adjust from_time to include prior 200 entries for that interval for ema200
-def adjust_from_time(from_time, interval):
-    delta = 199
-
-    # Possible Values: 1 3 5 15 30 60 120 240 360 720 "D" "W"
-    if interval not in ["1", "3", "5", "15", "30", "60", "120", "240", "360", "720", "D", "W"]:
-        return from_time
-
-    if interval == 'W':
-        from_time = from_time - timedelta(weeks=delta)
-    elif interval == 'D':
-        from_time = from_time - timedelta(days=delta)
-    else:
-        from_time = from_time - timedelta(minutes=int(interval) * delta)
-    return from_time
-
-
-# Convert an index value of type numpy.datetime64 to type datetime
-def idx2datetime(index_value):
-    return dt.datetime.utcfromtimestamp(index_value.astype('O') / 1e9)
-
-def save_dataframe2file(test_num, symbol, from_time, to_time, interval, df, bybit_data_file=False, verbose=True):
-    config.OUTPUT_FILE_FORMAT, config.RESULTS_PATH, config.HISTORICAL_FILES_PATH
-    test_num = str(test_num)
-    from_str = from_time.strftime('%Y-%m-%d')
-    to_str = to_time.strftime('%Y-%m-%d')
-    fname = f'{symbol}_{from_str}_to_{to_str}_[{interval}]'
-
-    if bybit_data_file:
-        fname = config.HISTORICAL_FILES_PATH + '\\' + fname
-    else:
-        fname = config.RESULTS_PATH + f'\\{test_num}_' + fname + '_Trades'
-
-    if 'csv' in config.OUTPUT_FILE_FORMAT:
-        fname = fname + '.csv'
-        df.to_csv(fname, index=True, header=True)
-        if verbose:
-            print(f'Trades file created => [{fname}]')
-    if 'xlsx' in config.OUTPUT_FILE_FORMAT:
-        fname = fname + '.xlsx'
-        df.to_excel(fname, index=True, header=True)
-        if verbose:
-            print(f'Trades file created => [{fname}]')
-
-
-def convert_interval_to_min(interval):
-    if interval == 'W':
-        return 7 * 24 * 60
-    elif interval == 'D':
-        return 24 * 60
-    return int(interval)
-
-
-def convert_excel_to_dataframe(filename):
-    wb = load_workbook(filename)
-    ws = wb['Sheet1']
-
-    # To convert a worksheet to a Dataframe you can use the value's property.
-    # This is very easy if the worksheet has no headers or indices:
-    # df = DataFrame(ws.values)
-
-    # https://openpyxl.readthedocs.io/en/stable/pandas.html
-
-    # If the worksheet does have headers or indices, such as one created by Pandas,
-    # then a little more work is required:
-    from itertools import islice
-    data = ws.values
-    cols = next(data)[1:]
-    data = list(data)
-    idx = [r[0] for r in data]
-    data = (islice(r, 1, None) for r in data)
-    df = pd.DataFrame(data, index=idx, columns=cols)
-
-    return df
 
 ##################################################################################
 ### Get Data from the ByBit API
@@ -134,7 +41,7 @@ def get_bybit_kline_data(test_num, symbol, from_time, to_time, interval, include
 
     # Adjust from_time to add 200 additional prior entries for ema200
     if include_prior_200:
-        start_time = adjust_from_time(from_time, interval)
+        start_time = utils.adjust_from_time(from_time, interval)
 
     last_datetime_stamp = start_time.timestamp()
     to_time_stamp = to_time.timestamp()
@@ -165,7 +72,7 @@ def get_bybit_kline_data(test_num, symbol, from_time, to_time, interval, include
 
     # Write to file
     if write_to_file:
-        save_dataframe2file(test_num, symbol, from_time, to_time, interval, df, True, True)
+        utils.save_dataframe2file(test_num, symbol, from_time, to_time, interval, df, True, True)
 
     return df
 
@@ -248,94 +155,7 @@ def add_indicators_and_signals(params, df):
 
     return df
 
-##################################################################################
-### Statistics
-##################################################################################
-def print_trade_stats(total_wins, total_losses, nb_wins, nb_losses, total_fees_paid,
-                      max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index):
-    total_trades = nb_wins + nb_losses
-    success_rate = (nb_wins / total_trades * 100) if total_trades != 0 else 0
-    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-    print(f'\n-------------------- Statistics --------------------')
-    print(f'Winning Trades: {nb_wins}')
-    print(f'Max # Consecutive Wins: {max_conseq_wins}')
-    print('---')
-    print(f'Losing Trades: {nb_losses}')
-    print(f'Max # Consecutive Losses: {max_conseq_losses}')
-    print('---')
-    print(f'Total Trades: {total_trades}')
-    print(f'Success Rate: {success_rate:.1f}%')
-    print(f'Win/Loose Index: Min[{min_win_loose_index}] Max[{max_win_loose_index}]')
-    print()
-    print(f'Total Wins: {locale.currency(total_wins, grouping=True)}')
-    print(f'Total Losses: {locale.currency(total_losses, grouping=True)}')
-    print(f'Total Fees Paid: {locale.currency(total_fees_paid, grouping=True)}')
-    print(f'Total P/L: {locale.currency(total_wins + total_losses - total_fees_paid, grouping=True)}\n')
-    # print('-------------------------------------------------------')
 
-def determine_win_or_loose(row):
-    if row['win'] != 0:
-        return 'W'
-    elif row['loss'] != 0:
-        return 'L'
-    else:
-        return None
-
-# Returns 4 values.
-# 1) Maximum number of consecutive win trades within the date range
-# 2) Maximum number of consecutive loss trades within the date range
-# 3) Minimum loosing index
-# 4) Maximum loosing index
-def analyze_win_lose(df):
-    # Part 1: Max consecutive wins or losses
-    df['W/L'] = df.apply(determine_win_or_loose, axis=1)
-    values = df['W/L'].values.tolist()
-    values = list(filter(None, values))  # Remove nulls
-
-    last_index = len(values) - 1
-    count_W = 0
-    count_L = 0
-    max_W = 0
-    max_L = 0
-
-    for i, val in enumerate(values):
-        if val == 'W':
-            count_W += 1
-            if i == last_index and count_W > max_W:
-                max_W = count_W
-            elif i < last_index and values[i + 1] != val:
-                if count_W > max_W:
-                    max_W = count_W
-                count_W = 0
-        elif val == 'L':
-            count_L += 1
-            if i == last_index and count_L > max_L:
-                max_L = count_L
-            elif i < last_index and values[i + 1] != val:
-                if count_L > max_L:
-                    max_L = count_L
-                count_L = 0
-        # print(f'Index[{i}] Value[{val}] - count_W: {count_W}, count_L: {count_L}, max_W: {max_W}, max_L: {max_L}')
-
-    # Part 2: Loosing Metric
-    win_loose_index = 0
-    min_win_loose_index = 0
-    max_win_loose_index = 0
-
-    for i, val in enumerate(values):
-        if val == 'W':
-            win_loose_index += 1
-        elif val == 'L':
-            win_loose_index -= 1
-
-        if win_loose_index > max_win_loose_index:
-            max_win_loose_index = win_loose_index
-        elif win_loose_index < min_win_loose_index:
-            min_win_loose_index = win_loose_index
-
-        # print(f'[{i}][{val}]: current[{win_loose_index}] min[{min_win_loose_index}] max[{max_win_loose_index}]')
-
-    return max_W, max_L, min_win_loose_index, max_win_loose_index
 
 ##################################################################################
 ### Process Trades
@@ -393,7 +213,7 @@ def find_crossing(df, symbol, from_time, to_time, delta=0):
         if row.cross in [-1, 1]:
             # print(f'Found 1st Crossing at [{i}] + delta[{delta}]')
             price_on_crossing = result_df.iloc[i + delta, close_col_index]
-            time_on_crossing = idx2datetime(result_df.index.values[i + delta])
+            time_on_crossing = utils.idx2datetime(result_df.index.values[i + delta])
             break
 
     return time_on_crossing, price_on_crossing
@@ -442,8 +262,8 @@ def process_trades(params, df):
             # print(f'\nEntering Long: {row.Index}')
             if params['Precision_Crossing']:
                 # Find exact crossing and price to the minute
-                start_time = idx2datetime(df.index.values[i])
-                end_time = start_time + dt.timedelta(minutes=(convert_interval_to_min(params['Interval'])))
+                start_time = utils.idx2datetime(df.index.values[i])
+                end_time = start_time + dt.timedelta(minutes=(utils.convert_interval_to_min(params['Interval'])))
                 entry_time, entry_price = find_crossing(df[['close']].iloc[0:i], params['Symbol'], start_time, end_time)
                 df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 df.iloc[i, entry_price_col_index] = entry_price
@@ -545,8 +365,8 @@ def process_trades(params, df):
             # print(f'\nEntering Short: {row.Index}')
             if params['Precision_Crossing']:
                 # Find exact crossing and price to the minute
-                start_time = idx2datetime(df.index.values[i])
-                end_time = start_time + dt.timedelta(minutes=(convert_interval_to_min(params['Interval'])))
+                start_time = utils.idx2datetime(df.index.values[i])
+                end_time = start_time + dt.timedelta(minutes=(utils.convert_interval_to_min(params['Interval'])))
                 entry_time, entry_price = find_crossing(df[['close']].iloc[0:i], params['Symbol'], start_time, end_time)
                 df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 df.iloc[i, entry_price_col_index] = entry_price
@@ -646,9 +466,9 @@ def process_trades(params, df):
     df = df.loc[df['macd'].apply(lambda x: x is not None)]
 
     # Save trade details to file
-    save_dataframe2file(params['Test_Num'], params['Symbol'], params['From_Time'], params['To_Time'], params['Interval'], df, False, True)
+    utils.save_dataframe2file(params['Test_Num'], params['Symbol'], params['From_Time'], params['To_Time'], params['Interval'], df, False, True)
 
-    max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = analyze_win_lose(df)
+    max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(df)
 
     # print_trade_stats(
     #     total_wins,
@@ -698,91 +518,13 @@ def process_trades(params, df):
 ##################################################################################
 ###
 ##################################################################################
-# Print parameter values.
-# 'all'=True prints all values
-# 'all'=False prints only relevant ones (default)
-def print_parameters(params, all=False):
-    if all:
-        print('------------------------ Params ---------------------------')
-        for key, value in params.items():
-            print(f'{key}: {value}')
-        print('-------------------------------------------------------')
-    else:
-        print('-------------------------------------------------------')
-        print(f'SYMBOL: {params["Symbol"]}')
-        print(f'FROM_TIME: {params["From_Time"]}')
-        print(f'TO_TIME: {params["To_Time"]}')
-        print(f'INTERVAL: {params["Interval"]}')
-        print(f'TRADE_AMOUNT: {params["Trade_Amount"]}')
-        print(f'TAKE_PROFIT_PCT: {params["Take_Profit_PCT"]}%')
-        print(f'STOP_LOSS_PCT: {params["Stop_Loss_PCT"]}%')
-        print(f'MAKER_FEE_PCT: {params["Maker_Fee_PCT"]}%')
-        print(f'TAKER_FEE_PCT: {params["Taker_Fee_PCT"]}%')
-        print('-------------------------------------------------------')
 
-
-def validate_params(params):
-    if not isinstance(params['From_Time'], dt.datetime):
-        raise Exception(f'Invalid Parameter [From_Time] = {params["From_Time"]}')
-
-    if not isinstance(params['To_Time'], dt.datetime):
-        raise Exception(f'Invalid Parameter [To_Time] = {params["To_Time"]}')
-
-    if params["Interval"] not in ["1", "3", "5", "15", "30", "60", "120", "240", "360", "720", "D", "W"]:
-        raise Exception(f'Invalid Parameter [Interval] = {params["Interval"]}')
-
-    trade_amount = params["Trade_Amount"]
-    if not isinstance(trade_amount, float) or trade_amount <= 0:
-        raise Exception(f'Invalid Parameter [Trade_Amount] = {trade_amount}. Must be a positive value of type float.')
-
-    take_profit_pct = params["Take_Profit_PCT"]
-    if not isinstance(take_profit_pct, float) or take_profit_pct <= 0:
-        raise Exception(
-            f'Invalid Parameter [Take_Profit_PCT] = {take_profit_pct}. Must be a positive value of type float.')
-
-    stop_loss_pct = params["Stop_Loss_PCT"]
-    if not isinstance(stop_loss_pct, float) or stop_loss_pct <= 0:
-        raise Exception(f'Invalid Parameter [Stop_Loss_PCT] = {stop_loss_pct}. Must be a positive value of type float.')
-
-    maker_fee_pct = params["Maker_Fee_PCT"]
-    if not isinstance(maker_fee_pct, float):
-        raise Exception(f'Invalid Parameter [Maker_Fee_PCT] = {maker_fee_pct}. Must be a positive value of type float.')
-
-    taker_fee_pct = params["Taker_Fee_PCT"]
-    if not isinstance(taker_fee_pct, float):
-        raise Exception(f'Invalid Parameter [Taker_Fee_PCT] = {taker_fee_pct}. Must be a positive value of type float.')
-
-    if not isinstance(params['Precision_Crossing'], bool):
-        raise Exception(f'Invalid Parameter [Precision_Crossing] = {params["Precision_Crossing"]}')
-
-    # Convert all items to lower case
-    formats_list = config.OUTPUT_FILE_FORMAT
-    if not isinstance(formats_list, list) or len(config.OUTPUT_FILE_FORMAT) == 0:
-        raise Exception(f'Invalid Global Setting [OUTPUT_FILE_FORMAT] = {formats_list}.')
-    config.OUTPUT_FILE_FORMAT = [x.lower() for x in config.OUTPUT_FILE_FORMAT]
-
-
-def load_test_cases_from_file(filename):
-    print(f'Loading test cases from file => [{filename}]')
-    df = convert_excel_to_dataframe(filename)
-    df['Interval'] = df['Interval'].astype(str)
-    df['Trade Amount'] = df['Trade Amount'].astype(float)
-    df['TP %'] = df['TP %'].astype(float)
-    df['SL %'] = df['SL %'].astype(float)
-    df['Maker Fee %'] = df['Maker Fee %'].astype(float)
-    df['Taker Fee %'] = df['Taker Fee %'].astype(float)
-    # Convert str to bool. astype(bool) does not work
-    df['Precision Crossing'] = np.where(df['Precision Crossing'] == 'True', True, False)
-    return df
-
-
-def create_empty_results_df():
-    df = pd.DataFrame(
-        columns=['Test #', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
-                 'Precision Crossing', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
-                 'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
-    return df
-
+# def create_empty_results_df():
+#     df = pd.DataFrame(
+#         columns=['Test #', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
+#                  'Precision Crossing', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
+#                  'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
+#     return df
 
 # Run the backtesting
 def backtest(params):
@@ -823,7 +565,10 @@ def main():
     # print(test_cases_df.to_string())
 
     # Create DataFrame to store results
-    results_df = create_empty_results_df()
+    results_df = pd.DataFrame(
+        columns=['Test #', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
+                 'Precision Crossing', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
+                 'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
     # print(results_df.to_string())
 
     # Run back test each test case
