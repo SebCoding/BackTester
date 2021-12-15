@@ -10,13 +10,10 @@ from pybit import HTTP
 
 import config
 
-##################################################################################
-### Get keys from the config file
-##################################################################################
-my_api_key = config.API_KEY
-my_api_secret = config.API_SECRET
-# print(my_api_key)
-# print(my_api_secret)
+import warnings
+warnings.filterwarnings('ignore')
+
+
 
 ##################################################################################
 ### Change Timezone if Needed
@@ -57,25 +54,24 @@ def adjust_from_time(from_time, interval):
 def idx2datetime(index_value):
     return dt.datetime.utcfromtimestamp(index_value.astype('O') / 1e9)
 
-
 def save_dataframe2file(test_num, symbol, from_time, to_time, interval, df, bybit_data_file=False, verbose=True):
-    global OUTPUT_FILE_FORMAT, RESULTS_PATH, HISTORICAL_FILES_PATH
+    config.OUTPUT_FILE_FORMAT, config.RESULTS_PATH, config.HISTORICAL_FILES_PATH
     test_num = str(test_num)
     from_str = from_time.strftime('%Y-%m-%d')
     to_str = to_time.strftime('%Y-%m-%d')
     fname = f'{symbol}_{from_str}_to_{to_str}_[{interval}]'
 
     if bybit_data_file:
-        fname = HISTORICAL_FILES_PATH + '\\' + fname
+        fname = config.HISTORICAL_FILES_PATH + '\\' + fname
     else:
-        fname = RESULTS_PATH + f'\\{test_num}_' + fname + '_Trades'
+        fname = config.RESULTS_PATH + f'\\{test_num}_' + fname + '_Trades'
 
-    if 'csv' in OUTPUT_FILE_FORMAT:
+    if 'csv' in config.OUTPUT_FILE_FORMAT:
         fname = fname + '.csv'
         df.to_csv(fname, index=True, header=True)
         if verbose:
             print(f'Trades file created => [{fname}]')
-    if 'xlsx' in OUTPUT_FILE_FORMAT:
+    if 'xlsx' in config.OUTPUT_FILE_FORMAT:
         fname = fname + '.xlsx'
         df.to_excel(fname, index=True, header=True)
         if verbose:
@@ -117,13 +113,13 @@ def convert_excel_to_dataframe(filename):
 ##################################################################################
 def get_bybit_kline_data(test_num, symbol, from_time, to_time, interval, include_prior_200=True, write_to_file=True, verbose=True):
     # Unauthenticated
-    # session_unauth = HTTP(endpoint='https://api.bybit.com')
+    # session_unauth = HTTP(endpoint=api_endpoint)
 
     # Authenticated
     session_auth = HTTP(
-        endpoint='https://api.bybit.com',
-        api_key=my_api_key,
-        api_secret=my_api_secret
+        endpoint = config.api_endpoint,
+        api_key = config.my_api_key,
+        api_secret = config.my_api_secret
     )
 
     # The issue with ByBit API is that you can get a maximum of 200 bars from it.
@@ -255,9 +251,6 @@ def add_indicators_and_signals(params, df):
 ##################################################################################
 ### Statistics
 ##################################################################################
-# ----------------------------------------------------------------------
-# Print Statistics
-# ----------------------------------------------------------------------
 def print_trade_stats(total_wins, total_losses, nb_wins, nb_losses, total_fees_paid,
                       max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index):
     total_trades = nb_wins + nb_losses
@@ -280,7 +273,6 @@ def print_trade_stats(total_wins, total_losses, nb_wins, nb_losses, total_fees_p
     print(f'Total P/L: {locale.currency(total_wins + total_losses - total_fees_paid, grouping=True)}\n')
     # print('-------------------------------------------------------')
 
-
 def determine_win_or_loose(row):
     if row['win'] != 0:
         return 'W'
@@ -288,7 +280,6 @@ def determine_win_or_loose(row):
         return 'L'
     else:
         return None
-
 
 # Returns 4 values.
 # 1) Maximum number of consecutive win trades within the date range
@@ -765,11 +756,10 @@ def validate_params(params):
         raise Exception(f'Invalid Parameter [Precision_Crossing] = {params["Precision_Crossing"]}')
 
     # Convert all items to lower case
-    global OUTPUT_FILE_FORMAT
-    formats_list = OUTPUT_FILE_FORMAT
-    if not isinstance(formats_list, list) or len(OUTPUT_FILE_FORMAT) == 0:
+    formats_list = config.OUTPUT_FILE_FORMAT
+    if not isinstance(formats_list, list) or len(config.OUTPUT_FILE_FORMAT) == 0:
         raise Exception(f'Invalid Global Setting [OUTPUT_FILE_FORMAT] = {formats_list}.')
-    OUTPUT_FILE_FORMAT = [x.lower() for x in OUTPUT_FILE_FORMAT]
+    config.OUTPUT_FILE_FORMAT = [x.lower() for x in config.OUTPUT_FILE_FORMAT]
 
 
 def load_test_cases_from_file(filename):
@@ -802,13 +792,12 @@ def backtest(params):
 
     # Method 1 (slow): Get historical data directly from the ByBit API
     # --------------------------------------------------------------------
-    global MIN_DATA_SIZE
     df = get_bybit_kline_data(params['Test_Num'], params['Symbol'], params['From_Time'], params['To_Time'], params['Interval'])
     if df is None:
         print(f'\nNo data was returned from ByBit. Unable to backtest strategy.')
         raise Exception("No data returned by ByBit")
-    elif len(df) <= MIN_DATA_SIZE:
-        print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={MIN_DATA_SIZE}. Unable to backtest strategy.')
+    elif len(df) <= config.MIN_DATA_SIZE:
+        print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={config.MIN_DATA_SIZE}. Unable to backtest strategy.')
         raise Exception("Unable to Run Strategy on Data Set")
 
     # Method 2 (fast): Get historical data from previously saved files
@@ -827,62 +816,52 @@ def backtest(params):
 ##################################################################################
 ### Running the BackTesting
 ##################################################################################
-import warnings
-warnings.filterwarnings('ignore')
 
-# Global Application Settings
-TEST_CASES_FILE_PATH = 'TestCases.xlsx'  # File containing test cases
-HISTORICAL_FILES_PATH = 'ByBitData'  # Folder location where to store ByBit original raw data
-RESULTS_PATH = 'BackTestingResults'  # Folder location where to store the back testing output
-OUTPUT_FILE_FORMAT = ['xlsx']  # Preferred format(s) for the output: csv, xlsx or both. Ex: ['csv', 'xlsx']
-MIN_DATA_SIZE = 201  # Cannot run Strategy on data set less than this value
+def main():
+    # Load test cases from Excel file
+    test_cases_df = load_test_cases_from_file(config.TEST_CASES_FILE_PATH)
+    # print(test_cases_df.to_string())
 
-# Load test cases from Excel file
-test_cases_df = load_test_cases_from_file(TEST_CASES_FILE_PATH)
-# print(test_cases_df.to_string())
+    # Create DataFrame to store results
+    results_df = create_empty_results_df()
+    # print(results_df.to_string())
 
-# Create DataFrame to store results
-results_df = create_empty_results_df()
-# print(results_df.to_string())
+    # Run back test each test case
+    for index, row in test_cases_df.iterrows():
+        params = {
+            'Test_Num': index
+            , 'Symbol': row.Symbol
+            , 'From_Time': row.From
+            , 'To_Time': row.To
+            , 'Interval': row.Interval
+            , 'Trade_Amount': row['Trade Amount']
+            , 'Take_Profit_PCT': row['TP %']
+            , 'Stop_Loss_PCT': row['SL %']
+            , 'Maker_Fee_PCT': row['Maker Fee %']
+            , 'Taker_Fee_PCT': row['Taker Fee %']
+            , 'Precision_Crossing': row['Precision Crossing']
 
-# Run back test each test case
-for index, row in test_cases_df.iterrows():
-    params = {
-        'Test_Num': index
-        , 'Symbol': row.Symbol
-        , 'From_Time': row.From
-        , 'To_Time': row.To
-        , 'Interval': row.Interval
-        , 'Trade_Amount': row['Trade Amount']
-        , 'Take_Profit_PCT': row['TP %']
-        , 'Stop_Loss_PCT': row['SL %']
-        , 'Maker_Fee_PCT': row['Maker Fee %']
-        , 'Taker_Fee_PCT': row['Taker Fee %']
-        , 'Precision_Crossing': row['Precision Crossing']
+            , 'Results': results_df
+        }
 
-        , 'Results': results_df
-    }
+        df = backtest(params)
+        results_df = params['Results']
 
-    df = backtest(params)
-    results_df = params['Results']
+    # Save results to file
+    results_df = results_df.set_index('Test #')
+    if 'csv' in config.OUTPUT_FILE_FORMAT:
+        fname = config.RESULTS_PATH + '\\' + 'Statistics.csv'
+        results_df.to_csv(fname, index=True, header=True)
+        print(f'Stats file created => [{fname}]')
 
-# Save results to file
-results_df = results_df.set_index('Test #')
-if 'csv' in OUTPUT_FILE_FORMAT:
-    fname = RESULTS_PATH + '\\' + 'Statistics.csv'
-    results_df.to_csv(fname, index=True, header=True)
-    print(f'Stats file created => [{fname}]')
+    if 'xlsx' in config.OUTPUT_FILE_FORMAT:
+        fname = config.RESULTS_PATH + '\\' + 'Statistics.xlsx'
+        results_df.to_excel(fname, index=True, header=True)
+        print(f'Stats file created => [{fname}]')
 
-if 'xlsx' in OUTPUT_FILE_FORMAT:
-    fname = RESULTS_PATH + '\\' + 'Statistics.xlsx'
-    results_df.to_excel(fname, index=True, header=True)
-    print(f'Stats file created => [{fname}]')
+    # Display Results DataFrame to Console
+    print(results_df.to_markdown())
 
-# Display Results DataFrame to Console
-print(results_df.to_markdown())
 
-# def main():
-#     print("main()")
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
