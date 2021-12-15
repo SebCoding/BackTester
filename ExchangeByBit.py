@@ -8,7 +8,7 @@ import utils
 from Exchange import Exchange
 
 
-class ByBitExchange(Exchange):
+class ExchangeByBit(Exchange):
     name = 'ByBit'
     api_endpoint = 'https://api.bybit.com'
 
@@ -17,7 +17,7 @@ class ByBitExchange(Exchange):
                     "D": "D", "W": "W"}
 
     def __init__(self):
-        super().__init__()
+
         self.my_api_key = api_keys.BYBIT_API_KEY
         self.my_api_secret = api_keys.BYBIT_API_SECRET
 
