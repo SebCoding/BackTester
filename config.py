@@ -11,8 +11,8 @@ MIN_DATA_SIZE = 201  # Cannot run Strategy on data set less than this value
 SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
 
 # Supported Exchange List
-SUPPORTED_EXCHANGES = ['ByBit']
+SUPPORTED_EXCHANGES = ['Binance', 'ByBit']
 
 # Implemented Strategies
-IMPLEMENTED_STRATEGIES = ['MACD', 'MACD Precise']
+IMPLEMENTED_STRATEGIES = ['MACD', 'Early MACD']
 

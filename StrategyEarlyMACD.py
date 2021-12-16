@@ -9,9 +9,9 @@ from Strategy import Strategy
 import stats
 import utils
 
-class StrategyMACDPrecise(Strategy):
+class StrategyEarlyMACD(Strategy):
 
-    name = 'MACD Precise'
+    NAME = 'Early MACD'
 
     def __init__(self, params, df, my_exchange):
         super().__init__(params, df)
@@ -36,7 +36,7 @@ class StrategyMACDPrecise(Strategy):
         self.df['high'] = self.df['high'].astype(float)
         self.df['low'] = self.df['low'].astype(float)
         self.df['close'] = self.df['close'].astype(float)
-        self.df['volume'] = self.df['volume'].astype(np.int64)
+        self.df['volume'] = self.df['volume'].astype(float)
 
         # Keep only this list of columns, delete all other columns
         final_table_columns = ['symbol', 'interval', 'open', 'high', 'low', 'close']
@@ -131,7 +131,7 @@ class StrategyMACDPrecise(Strategy):
         # print('\n')
 
         # Find first occurrence of crossing. Delta optional (add delta minutes)
-        price_on_crossing = 0
+        price_on_crossing = 0.0 # Force float
         time_on_crossing = dt.datetime(1, 1, 1)
         close_col_index = result_df.columns.get_loc("close")
         for i, row in enumerate(result_df.itertuples(index=True), 0):
@@ -158,7 +158,7 @@ class StrategyMACDPrecise(Strategy):
         total_losses = 0.0
         total_fees_paid = 0.0
 
-        print(f'Processing Trades using strategy [{StrategyMACDPrecise.name}]')
+        print(f'Processing Trades using the [{self.NAME}] strategy')
 
         # We use numeric indexing to update values in the DataFrame
         # Find the column indexes

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 # Abstract Exchange Class
 class Strategy(ABC):
 
-    name = 'abstract'
+    NAME = 'abstract'
 
     def __init__(self, params, df):
         self.params = params

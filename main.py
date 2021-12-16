@@ -1,22 +1,34 @@
-# Ignore warnings when reading xlsx file containing list of values for dropdown
+
 import warnings
 
 import pandas as pd
 
 import ExchangeByBit
 import config
+from ExchangeBinance import ExchangeBinance
+from ExchangeByBit import ExchangeByBit
 from StrategyMACD import StrategyMACD
-from StrategyMACDPrecise import StrategyMACDPrecise
+from StrategyEarlyMACD import StrategyEarlyMACD
 from params import validate_params, load_test_cases_from_file
 
+# Ignore warnings when reading xlsx file containing list of values for dropdown
 warnings.filterwarnings('ignore')
 
-def get_strategy(params, df, my_exchange):
+def init_exchange(params):
+    match params['Exchange']:
+        case 'Binance':
+            return ExchangeBinance()
+        case 'ByBit':
+            return ExchangeByBit()
+        case _:
+            raise Exception(f"Invalid Exchange: {params['Exchange']}.")
+
+def init_strategy(params, df, my_exchange):
     match params['Strategy']:
         case 'MACD':
             return StrategyMACD(params, df)
-        case 'MACD Precise':
-            return StrategyMACDPrecise(params, df, my_exchange)
+        case 'Early MACD':
+            return StrategyEarlyMACD(params, df, my_exchange)
         case _:
             raise Exception(f"Invalid Strategy: {params['Strategy']}.")
 
@@ -26,26 +38,26 @@ def backtest(params):
     # print_parameters(params, True)
     validate_params(params)
 
-    # Method 1 (slow): Get historical data directly from the ByBit API
+    # Method 1 (slow): Get historical data directly from the Exchange API
     # --------------------------------------------------------------------
-    my_exchange = ExchangeByBit.ExchangeByBit()
+    my_exchange = init_exchange(params)
     df = my_exchange.get_candle_data(params['Test_Num'], params['Symbol'],
                                      params['From_Time'], params['To_Time'], params['Interval'],
                                      include_prior=200, write_to_file=True, verbose=True)
     if df is None:
-        print(f'\nNo data was returned from {my_exchange.name}. Unable to backtest strategy.')
-        raise Exception(f"No data returned by {my_exchange.name}")
+        print(f'\nNo data was returned from {my_exchange.NAME}. Unable to backtest strategy.')
+        raise Exception(f"No data returned by {my_exchange.NAME}")
     elif len(df) <= config.MIN_DATA_SIZE:
         print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={config.MIN_DATA_SIZE}. Unable to backtest strategy.')
         raise Exception("Unable to Run Strategy on Data Set")
 
-    # Method 2 (fast): Get historical data from previously saved files
+    # TODO: Method 2 (fast): Get historical data from previously saved files
     # --------------------------------------------------------------------
     # filename = config.HISTORICAL_FILES_PATH + '\\BTCUSDT_2021-01-01_to_2021-11-27_30.xlsx'
     # print(f'Reading data from file => [{filename}]')
     # df = utils.convert_excel_to_dataframe(filename)
 
-    strategy = get_strategy(params, df, my_exchange)
+    strategy = init_strategy(params, df, my_exchange)
     strategy.add_indicators_and_signals()
     strategy.process_trades()
 

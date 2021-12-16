@@ -72,6 +72,7 @@ def save_dataframe2file(test_num, exchange, symbol, from_time, to_time, interval
         if verbose:
             print(f'File created => [{filename}]')
 
+# TODO: Find a way to format the Excel workbook prior to saving to file
 def to_excel_formatted(df, filename):
     wb = Workbook()
     ws = wb.active
@@ -84,7 +85,6 @@ def to_excel_formatted(df, filename):
         cell.style = 'Pandas'
 
     wb.save(filename)
-
 
 def convert_interval_to_min(interval):
     if interval == 'W':

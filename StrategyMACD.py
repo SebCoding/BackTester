@@ -11,7 +11,7 @@ import utils
 
 class StrategyMACD(Strategy):
 
-    name = 'MACD'
+    NAME = 'MACD'
 
     def __init__(self, params, df):
         super().__init__(params, df)
@@ -35,7 +35,7 @@ class StrategyMACD(Strategy):
         self.df['high'] = self.df['high'].astype(float)
         self.df['low'] = self.df['low'].astype(float)
         self.df['close'] = self.df['close'].astype(float)
-        self.df['volume'] = self.df['volume'].astype(np.int64)
+        self.df['volume'] = self.df['volume'].astype(float)
 
         # Keep only this list of columns, delete all other columns
         final_table_columns = ['symbol', 'interval', 'open', 'high', 'low', 'close']
@@ -97,7 +97,7 @@ class StrategyMACD(Strategy):
         total_losses = 0.0
         total_fees_paid = 0.0
 
-        print(f'Processing Trades using strategy [{StrategyMACD.name}]')
+        print(f'Processing Trades using the [{self.NAME}] strategy')
 
         # We use numeric indexing to update values in the DataFrame
         # Find the column indexes

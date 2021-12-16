@@ -1,31 +1,37 @@
-import pandas as pd
-from pybit import HTTP
 import datetime as dt
 
-import api_keys
-import config
+import pandas as pd
+from pybit import HTTP
+
 import utils
 from Exchange import Exchange
 
 
 class ExchangeByBit(Exchange):
-    name = 'ByBit'
-    api_endpoint = 'https://api.bybit.com'
+    NAME = 'ByBit'
 
-    interval_map = {"1": "1", "3": "3", "5": "5", "15": "15", "30": "30", "60": "60",
-                    "120": "120", "240": "240", "360": "360", "720": '720',
-                    "D": "D", "W": "W"}
+    interval_map = {
+        "1": "1",
+        "3": "3",
+        "5": "5",
+        "15": "15",
+        "30": "30",
+        "60": "60",   # 1 Hour
+        "120": "120", # 2 Hours
+        "240": "240", # 4 Hours
+        "360": "360", # 6 Hours
+        "720": '720', # 12 Hours
+        "D": "D",
+        "W": "W"
+    }
 
     def __init__(self):
-
-        self.my_api_key = api_keys.BYBIT_API_KEY
-        self.my_api_secret = api_keys.BYBIT_API_SECRET
-
+        super().__init__()
+        self.my_api_endpoint = 'https://api.bybit.com'
         # Unauthenticated
-        self.session_unauth = HTTP(endpoint=self.api_endpoint)
-
+        self.session_unauth = HTTP(endpoint=self.my_api_endpoint)
         # Authenticated
-        self.session_auth = HTTP(endpoint=self.api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret)
+        self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret)
 
     def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True, verbose=False):
         # The issue with ByBit API is that you can get a maximum of 200 bars from it.
@@ -33,7 +39,7 @@ class ExchangeByBit(Exchange):
 
         if verbose:
             # print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
-            print(f'Fetching {symbol} data from {self.name}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
 
         df_list = []
         start_time = from_time
@@ -70,13 +76,26 @@ class ExchangeByBit(Exchange):
         # Drop rows that have a timestamp greater than to_time
         df = df[df.open_time <= int(to_time.timestamp())]
 
-        # Only keep relevant columns OCHLV
+        # Only keep relevant columns OHLC(V)
         df = df[['symbol', 'open', 'close', 'high', 'low', 'volume']]
+
+        # Set proper data types
+        df['open'] = df['open'].astype(float)
+        df['high'] = df['high'].astype(float)
+        df['low'] = df['low'].astype(float)
+        df['close'] = df['close'].astype(float)
+        df['volume'] = df['volume'].astype(float)
 
         # Write to file
         if write_to_file:
-            utils.save_dataframe2file(test_num, self.name, symbol, from_time, to_time, interval, df,
+            utils.save_dataframe2file(test_num, self.NAME, symbol, from_time, to_time, self.interval_map[interval], df,
                                       exchange_data_file=True,
                                       include_time=True if interval == '1' else False,
                                       verbose=False)
         return df
+
+# Testing Class
+# ex = ExchangeByBit()
+# from_time = pd.Timestamp(year=2021, month=10, day=1)
+# to_time = pd.Timestamp(year=2021, month=12, day=31)
+# ex.get_candle_data(0, 'BTCUSDT', from_time, to_time, "60", include_prior=0, write_to_file=True, verbose=True)
