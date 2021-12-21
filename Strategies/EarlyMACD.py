@@ -20,10 +20,10 @@ class EarlyMACD(IStrategy):
     # ----------------------------------------------------------------------
     # Function used determine trade entries (long/short)
     # ----------------------------------------------------------------------
-    def trade_entries(self, open, ema200, macdsignal, cross):
-        if open >= ema200 and macdsignal < 0 and cross == -1:
+    def trade_entries(self, open, trend, macdsignal, cross):
+        if trend == 'Up' and macdsignal < 0 and cross == -1:
             return "Enter Long"
-        elif open < ema200 and macdsignal > 0 and cross == 1:
+        elif trend == 'Down' and macdsignal > 0 and cross == 1:
             return "Enter Short"
         return None
 
@@ -56,7 +56,7 @@ class EarlyMACD(IStrategy):
         # self.df.dropna(inplace=True)
 
         # # Check if price is greater than ema200
-        self.df['GT_ema200'] = np.where(self.df['open'] > self.df['ema200'], 'Bull', 'Bear')
+        self.df['trend'] = np.where(self.df['close'] > self.df['ema200'], 'Up', 'Down')
 
         # macdsignal over macd then 1, under 0
         self.df['O/U'] = np.where(self.df['macdsignal'] >= self.df['macd'], 1, 0)
@@ -72,7 +72,7 @@ class EarlyMACD(IStrategy):
 
         # Enter trade on the same candle as the crossing
         self.df['trade_status'] = self.df.apply(
-            lambda x: self.trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']), axis=1)
+            lambda x: self.trade_entries(x['open'], x['trend'], x['macdsignal'], x['cross']), axis=1)
 
         # Add and Initialize new columns
         self.df['entry_time'] = None
@@ -378,8 +378,8 @@ class EarlyMACD(IStrategy):
                 # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
 
-        # Remove rows with nulls entries for macd or ema200
-        self.df = self.df.dropna(subset=['macd', 'ema200'])
+        # Remove rows with nulls entries for macd, macdsignal or ema200
+        self.df = self.df.dropna(subset=['ema200'])
 
         # Save trade details to file
         utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
