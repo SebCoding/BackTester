@@ -99,7 +99,7 @@ class EarlyMACD(IStrategy):
         return self.df
 
     # Find with a minute precision the first point where macd crossed macdsignal
-    # and return the time and closing price for that point
+    # and return the time and closing price for that point in time + delta minutes
     def find_crossing(self, df, symbol, from_time, to_time, delta=0):
         # We need to get an extra row to see the value at -1min in case the cross is on the first row
         to_time = to_time - dt.timedelta(minutes=1)
@@ -119,9 +119,9 @@ class EarlyMACD(IStrategy):
             df2 = df.copy()
             df2 = df2.append(row)
 
-            df2['macd'], df2['macdsignal'], df2['macdhist'] = talib.MACD(df2['close'], fastperiod=12, slowperiod=26,
-                                                                         signalperiod=9)
-            # del df2['macdhist']
+            macd, macdsignal, macdhist= talib.MACD(df2['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+            df2['macd'] = macd
+            df2['macdsignal'] = macdsignal
 
             # macdsignal over macd then 1, under 0
             df2['O/U'] = np.where(df2['macdsignal'] >= df2['macd'], 1, 0)
