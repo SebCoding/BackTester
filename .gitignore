@@ -3,4 +3,6 @@ api_keys.py
 .ipynb_checkpoints/
 __pycache__/
 Output/*
+!Output/.gitkeep
 ExchangeData/*
+!ExchangeData/*
