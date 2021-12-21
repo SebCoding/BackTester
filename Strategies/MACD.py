@@ -20,12 +20,35 @@ class MACD(IStrategy):
     # ----------------------------------------------------------------------
     # Function used determine trade entries (long/short)
     # ----------------------------------------------------------------------
-    def trade_entries(self, open, trend, macdsignal, cross):
-        if trend == 'Up' and macdsignal < 0 and cross == -1:
-            return "Enter Long"
-        elif trend == 'Down' and macdsignal > 0 and cross == 1:
-            return "Enter Short"
-        return None
+    # def trade_entries(self, trend, macdsignal, cross):
+    #     if trend == 'Up' and macdsignal < 0 and cross == -1:
+    #         return "Enter Long"
+    #     elif trend == 'Down' and macdsignal > 0 and cross == 1:
+    #         return "Enter Short"
+    #     return None
+
+    def mark_entries(self):
+        # Mark long entries
+        self.df.loc[
+            (
+                (self.df['close'] > self.df['ema200']) &  # price > ema200
+                (self.df['macdsignal'] < 0) &  # macdsignal < 0
+                (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
+            ),
+            'trade_status'] = 'Enter Long'
+
+        # Mark short entries
+        # trend == 'Down' and macdsignal > 0 and cross == 1:
+        self.df.loc[
+            (
+                (self.df['close'] < self.df['ema200']) &  # price < ema200
+                (self.df['macdsignal'] > 0) &  # macdsignal > 0
+                (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
+            ),
+            'trade_status'] = 'Enter Short'
+
+        # We enter the trade on the next candle after the signal candle has completed
+        self.df['trade_status'] = self.df['trade_status'].shift(1)
 
     # Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
@@ -43,20 +66,16 @@ class MACD(IStrategy):
         self.df = self.df[self.df.columns.intersection(final_table_columns)]
 
         ## MACD - Moving Average Convergence/Divergence
-        tmp = pd.DataFrame()
-        tmp['macd'], tmp['macdsignal'], tmp['macdhist'] = talib.MACD(self.df['close'], fastperiod=12, slowperiod=26,
-                                                                     signalperiod=9)
-        tmp.drop(['macdhist'], axis=1, inplace=True)
-        self.df = self.df.join(tmp, rsuffix='_right')
+        macd, macdsignal, macdhist = talib.MACD(self.df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+        self.df['macd'] = macd
+        self.df['macdsignal'] = macdsignal
 
-        ## EMA - Exponential Moving Average
+        # EMA - Exponential Moving Average 200
         self.df['ema200'] = talib.EMA(self.df['close'], timeperiod=200)
 
-        # # Remove nulls
-        # self.df.dropna(inplace=True)
-
-        # # Check if price is greater than ema200
-        self.df['trend'] = np.where(self.df['close'] > self.df['ema200'], 'Up', 'Down')
+        # Identify the trend
+        self.df.loc[self.df['close'] > self.df['ema200'], 'trend'] = 'Up'
+        self.df.loc[self.df['close'] < self.df['ema200'], 'trend'] = 'Down'
 
         # macdsignal over macd then 1, under 0
         self.df['O/U'] = np.where(self.df['macdsignal'] >= self.df['macd'], 1, 0)
@@ -64,16 +83,13 @@ class MACD(IStrategy):
         # macdsignal crosses macd
         self.df['cross'] = self.df['O/U'].diff()
 
-        # Drop now useless 'signal_over_under' column
-        # self.df.drop(['signal_over_under'], inplace=True, axis = 1)
-
-        # Remove nulls
-        # self.df.dropna(inplace=True)
-
         # Enter trade in the candle after the crossing
-        self.df['trade_status'] = self.df.apply(
-            lambda x: self.trade_entries(x['open'], x['trend'], x['macdsignal'], x['cross']),
-            axis=1).shift(1)
+        # self.df['trade_status'] = self.df.apply(
+        #     lambda x: self.trade_entries(x['trend'], x['macdsignal'], x['cross']),
+        #     axis=1).shift(1)
+
+        # Mark long/short entries
+        self.mark_entries()
 
         # Add and Initialize new columns
         self.df['take_profit'] = None
