@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import api_keys
 
 # Abstract Exchange Class
-class Exchange(ABC):
+class IExchange(ABC):
 
     NAME = 'abstract'
 

@@ -3,13 +3,13 @@ import pandas as pd
 import talib
 import datetime as dt
 
-from Strategy import Strategy
+from IStrategy import IStrategy
 
 # Abstract Exchange Class
 import stats
 import utils
 
-class StrategyMACD(Strategy):
+class StrategyMACD(IStrategy):
 
     NAME = 'MACD'
 

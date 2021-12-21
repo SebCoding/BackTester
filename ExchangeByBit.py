@@ -4,10 +4,10 @@ import pandas as pd
 from pybit import HTTP
 
 import utils
-from Exchange import Exchange
+from IExchange import IExchange
 
 
-class ExchangeByBit(Exchange):
+class ExchangeByBit(IExchange):
     NAME = 'ByBit'
 
     interval_map = {

@@ -1,40 +1,42 @@
 import pandas as pd
 import datetime as dt
+import time
 
 import api_keys
 import utils
-from IExchange import IExchange
-from binance.client import Client
+from IExchange import Exchange
+import krakenex
+from pykrakenapi import KrakenAPI
 
-# Using: python-binance
-# https://python-binance.readthedocs.io/en/latest/index.html
+#######################################################################################
+### TODO
+### IMPLEMENTATION NOT COMPLETED: Unable to find a way to pull historical market data
+#######################################################################################
 
-class ExchangeBinance(IExchange):
+# pip install pykrakenapi
 
-    NAME = 'Binance'
+class ExchangeKraken(Exchange):
+
+    NAME = 'Kraken'
 
     # Dictionary of symbols used by exchange to define intervals for candle data
-    # Binance valid intervals - 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M
+    # Kraken interval minutes (optional): 1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
     interval_map = {
-        "1": Client.KLINE_INTERVAL_1MINUTE,
-        "3": Client.KLINE_INTERVAL_3MINUTE,
-        "5": Client.KLINE_INTERVAL_5MINUTE,
-        "15": Client.KLINE_INTERVAL_15MINUTE,
-        "30": Client.KLINE_INTERVAL_30MINUTE,
-        "60": Client.KLINE_INTERVAL_1HOUR,
-        "120": Client.KLINE_INTERVAL_2HOUR,
-        "240": Client.KLINE_INTERVAL_4HOUR,
-        "360": Client.KLINE_INTERVAL_6HOUR,
-        "720": Client.KLINE_INTERVAL_12HOUR,
-        "D": Client.KLINE_INTERVAL_1DAY,
-        "W": Client.KLINE_INTERVAL_1WEEK
+        "1": 1,
+        "5": 5,
+        "15": 15,
+        "30": 30,
+        "60": 60,
+        "240": 240,
+        "D": 1440,
+        "W": 10080
     }
 
     def __init__(self):
         super().__init__()
-        self.my_api_key = api_keys.BINANCE_API_KEY
-        self.my_api_secret = api_keys.BINANCE_API_SECRET_KEY
-        self.client = Client(api_keys.BINANCE_API_KEY, api_keys.BINANCE_API_SECRET_KEY)
+        # self.my_api_key = api_keys.BINANCE_API_KEY
+        # self.my_api_secret = api_keys.BINANCE_API_SECRET_KEY
+        # self.client = Client(api_keys.BINANCE_API_KEY, api_keys.BINANCE_API_SECRET_KEY)
 
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     # Note: Binance uses 13 digit timestamps as opposed to 10 in our code.
@@ -43,7 +45,7 @@ class ExchangeBinance(IExchange):
                         verbose=False):
 
         if self.interval_map[interval] is None:
-            raise Exception(f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, W].')
+            raise Exception(f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 5, 15, 30, 60, 240, D, W].')
 
         if verbose:
             print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
@@ -97,7 +99,38 @@ class ExchangeBinance(IExchange):
         return tmp_df
 
 # Testing Class
-# ex = ExchangeBinance()
-# from_time = pd.Timestamp(year=2021, month=6, day=1)
-# to_time = pd.Timestamp(year=2021, month=12, day=5)
-# ex.get_candle_data(0, 'BTCUSDT', from_time, to_time, "60", include_prior=0, write_to_file=True, verbose=True)
+ex = ExchangeKraken()
+from_time = pd.Timestamp(year=2021, month=6, day=1)
+to_time = pd.Timestamp(year=2021, month=12, day=5)
+#ex.get_candle_data(0, 'ETHUSDT', from_time, to_time, "60", include_prior=0, write_to_file=True, verbose=True)
+
+import requests
+
+# url = 'https://api.kraken.com/0/public/OHLC?pair=BTCUSDT'
+# df = pd.read_json(url)
+# print(df)
+
+
+
+api = krakenex.API()
+k = KrakenAPI(api)
+
+# Initial OHLC dataframe
+print(f'from_time:{from_time} stamp:{int(from_time.timestamp())}')
+df, last = k.get_ohlc_data("BTCUSDT", since=0, interval=30, ascending=True)
+
+
+# Infinite loop for additional OHLC data
+# while True:
+#     # Wait 60 seconds
+#     time.sleep(5)
+#
+#     # Get data and append to existing pandas dataframe
+#     ohlc, last = k.get_ohlc_data("BTCUSD", since=last + 60000, ascending=True)
+#     df_list.append(ohlc)
+#
+#     print(f'1 new data point downloaded. Total: {len(df.index)} data points.')
+
+#df = pd.concat(df_list)
+
+print(df)

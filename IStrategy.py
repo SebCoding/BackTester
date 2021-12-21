@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 # Abstract Exchange Class
-class Strategy(ABC):
+class IStrategy(ABC):
 
     NAME = 'abstract'
 

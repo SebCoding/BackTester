@@ -2,3 +2,5 @@
 api_keys.py
 .ipynb_checkpoints/
 __pycache__/
+Output/*
+ExchangeData/*
