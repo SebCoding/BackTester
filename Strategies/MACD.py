@@ -3,18 +3,19 @@ import pandas as pd
 import talib
 import datetime as dt
 
-from IStrategy import IStrategy
+from strategies.IStrategy import IStrategy
 
 # Abstract Exchange Class
 import stats
 import utils
 
-class StrategyMACD(IStrategy):
 
+class MACD(IStrategy):
     NAME = 'MACD'
 
-    def __init__(self, params, df):
+    def __init__(self, params, df, my_exchange):
         super().__init__(params, df)
+        self.my_exchange = my_exchange
 
     # ----------------------------------------------------------------------
     # Function used determine trade entries (long/short)
@@ -70,8 +71,9 @@ class StrategyMACD(IStrategy):
         # self.df.dropna(inplace=True)
 
         # Enter trade in the candle after the crossing
-        self.df['trade_status'] = self.df.apply(lambda x: self.trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']),
-                                      axis=1).shift(1)
+        self.df['trade_status'] = self.df.apply(
+            lambda x: self.trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']),
+            axis=1).shift(1)
 
         # Add and Initialize new columns
         self.df['take_profit'] = None
@@ -108,7 +110,7 @@ class StrategyMACD(IStrategy):
         losses_col_index = self.df.columns.get_loc("loss")
         fee_col_index = self.df.columns.get_loc("fee")
 
-        #interval = utils.convert_interval_to_min(self.params['Interval'])
+        # interval = utils.convert_interval_to_min(self.params['Interval'])
         TP_PCT = self.params['Take_Profit_PCT'] / 100
         SL_PCT = self.params['Stop_Loss_PCT'] / 100
         MAKER_FEE_PCT = self.params['Maker_Fee_PCT'] / 100
@@ -184,7 +186,7 @@ class StrategyMACD(IStrategy):
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
-                    #self.df.iloc[i, entry_price_col_index] = entry_price
+                    # self.df.iloc[i, entry_price_col_index] = entry_price
                     total_wins += win
                     trade_status = ''
                     nb_wins += 1
@@ -197,7 +199,7 @@ class StrategyMACD(IStrategy):
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
-                    #self.df.iloc[i, entry_price_col_index] = entry_price
+                    # self.df.iloc[i, entry_price_col_index] = entry_price
                     trade_status = 'Long'
 
             elif trade_status in ['Long'] and row.trade_status in ['Enter Long', 'Enter Short']:
@@ -207,7 +209,7 @@ class StrategyMACD(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
-                #self.df.iloc[i, entry_price_col_index] = entry_price
+                # self.df.iloc[i, entry_price_col_index] = entry_price
 
             # ------------------------------- Shorts -------------------------------
             elif trade_status == '' and row.trade_status == 'Enter Short':
@@ -300,14 +302,13 @@ class StrategyMACD(IStrategy):
                 # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 # self.df.iloc[i, entry_price_col_index] = entry_price
 
-        # Remove nulls
-        # self.df.dropna(inplace=True)
-        # self.df = self.df.loc[self.df['macd'] != None]
-        self.df = self.df.loc[self.df['macd'].apply(lambda x: x is not None)]
+        # Remove rows with nulls entries for macd or ema200
+        self.df = self.df.dropna(subset=['macd', 'ema200'])
 
         # Save trade details to file
-        utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'], self.params['From_Time'],
-                                  self.params['To_Time'], self.params['Interval'], self.df,
+        utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
+                                  self.params['From_Time'], self.params['To_Time'], self.params['Interval'],
+                                  self.df,
                                   exchange_data_file=False, include_time=False, verbose=True)
 
         max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(self.df)

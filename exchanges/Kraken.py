@@ -15,7 +15,7 @@ from pykrakenapi import KrakenAPI
 
 # pip install pykrakenapi
 
-class ExchangeKraken(Exchange):
+class Kraken(Exchange):
 
     NAME = 'Kraken'
 
@@ -43,6 +43,12 @@ class ExchangeKraken(Exchange):
     #       We need to multiply and divide by 1000 to adjust for it
     def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
+        # Use locally saved data if it exists
+        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+        if cached_df is not None:
+            if verbose:
+                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            return cached_df
 
         if self.interval_map[interval] is None:
             raise Exception(f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 5, 15, 30, 60, 240, D, W].')
@@ -92,14 +98,12 @@ class ExchangeKraken(Exchange):
 
         # Write to file
         if write_to_file:
-            utils.save_dataframe2file(test_num, self.NAME, symbol, from_time, to_time, interval, tmp_df,
-                                      exchange_data_file=True,
-                                      include_time=True if interval == '1' else False,
-                                      verbose=False)
+            self.save(symbol, from_time, to_time, interval, tmp_df, prior=include_prior,
+                      include_time=True if interval == '1' else False, verbose=False)
         return tmp_df
 
 # Testing Class
-ex = ExchangeKraken()
+ex = Kraken()
 from_time = pd.Timestamp(year=2021, month=6, day=1)
 to_time = pd.Timestamp(year=2021, month=12, day=5)
 #ex.get_candle_data(0, 'ETHUSDT', from_time, to_time, "60", include_prior=0, write_to_file=True, verbose=True)

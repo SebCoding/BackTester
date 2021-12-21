@@ -4,10 +4,10 @@ import pandas as pd
 from pybit import HTTP
 
 import utils
-from IExchange import IExchange
+from exchanges.IExchange import IExchange
 
 
-class ExchangeByBit(IExchange):
+class ByBit(IExchange):
     NAME = 'ByBit'
 
     interval_map = {
@@ -16,11 +16,11 @@ class ExchangeByBit(IExchange):
         "5": "5",
         "15": "15",
         "30": "30",
-        "60": "60",   # 1 Hour
-        "120": "120", # 2 Hours
-        "240": "240", # 4 Hours
-        "360": "360", # 6 Hours
-        "720": '720', # 12 Hours
+        "60": "60",  # 1 Hour
+        "120": "120",  # 2 Hours
+        "240": "240",  # 4 Hours
+        "360": "360",  # 6 Hours
+        "720": '720',  # 12 Hours
         "D": "D",
         "W": "W"
     }
@@ -33,7 +33,15 @@ class ExchangeByBit(IExchange):
         # Authenticated
         self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret)
 
-    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True, verbose=False):
+    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
+                        verbose=False):
+        # Use locally saved data if it exists
+        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+        if cached_df is not None:
+            if verbose:
+                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            return cached_df
+
         # The issue with ByBit API is that you can get a maximum of 200 bars from it.
         # So if you need to get data for a large portion of the time you have to call it multiple times.
 
@@ -88,10 +96,8 @@ class ExchangeByBit(IExchange):
 
         # Write to file
         if write_to_file:
-            utils.save_dataframe2file(test_num, self.NAME, symbol, from_time, to_time, self.interval_map[interval], df,
-                                      exchange_data_file=True,
-                                      include_time=True if interval == '1' else False,
-                                      verbose=False)
+            self.save(symbol, from_time, to_time, interval, df, prior=include_prior,
+                      include_time=True if interval == '1' else False, verbose=False)
         return df
 
 # Testing Class

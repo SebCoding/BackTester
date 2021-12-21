@@ -1,36 +1,38 @@
-
 import warnings
 
 import pandas as pd
 
-import ExchangeByBit
+from exchanges import ByBit
 import config
-from ExchangeBinance import ExchangeBinance
-from ExchangeByBit import ExchangeByBit
-from StrategyMACD import StrategyMACD
-from StrategyEarlyMACD import StrategyEarlyMACD
+from exchanges.Binance import Binance
+from exchanges.ByBit import ByBit
+from strategies.MACD import MACD
+from strategies.EarlyMACD import EarlyMACD
 from params import validate_params, load_test_cases_from_file
 
 # Ignore warnings when reading xlsx file containing list of values for dropdown
 warnings.filterwarnings('ignore')
 
-def init_exchange(params):
-    match params['Exchange']:
-        case 'Binance':
-            return ExchangeBinance()
-        case 'ByBit':
-            return ExchangeByBit()
-        case _:
-            raise Exception(f"Invalid Exchange: {params['Exchange']}.")
 
-def init_strategy(params, df, my_exchange):
-    match params['Strategy']:
-        case 'MACD':
-            return StrategyMACD(params, df)
-        case 'Early MACD':
-            return StrategyEarlyMACD(params, df, my_exchange)
-        case _:
-            raise Exception(f"Invalid Strategy: {params['Strategy']}.")
+# def init_exchange(params):
+#     match params['Exchange']:
+#         case 'Binance':
+#             return Binance()
+#         case 'ByBit':
+#             return ByBit()
+#         case _:
+#             raise Exception(f"Invalid Exchange: {params['Exchange']}.")
+#
+#
+# def init_strategy(params, df, my_exchange):
+#     match params['Strategy']:
+#         case 'MACD':
+#             return MACD(params, df)
+#         case 'EarlyMACD':
+#             return EarlyMACD(params, df, my_exchange)
+#         case _:
+#             raise Exception(f"Invalid Strategy: {params['Strategy']}.")
+
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
@@ -38,9 +40,8 @@ def backtest(params):
     # print_parameters(params, True)
     validate_params(params)
 
-    # Method 1 (slow): Get historical data directly from the Exchange API
-    # --------------------------------------------------------------------
-    my_exchange = init_exchange(params)
+    # my_exchange = init_exchange(params)
+    my_exchange = globals()[params['Exchange']]()
     df = my_exchange.get_candle_data(params['Test_Num'], params['Symbol'],
                                      params['From_Time'], params['To_Time'], params['Interval'],
                                      include_prior=200, write_to_file=True, verbose=True)
@@ -51,15 +52,11 @@ def backtest(params):
         print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={config.MIN_DATA_SIZE}. Unable to backtest strategy.')
         raise Exception("Unable to Run Strategy on Data Set")
 
-    # TODO: Method 2 (fast): Get historical data from previously saved files
-    # --------------------------------------------------------------------
-    # filename = config.HISTORICAL_FILES_PATH + '\\BTCUSDT_2021-01-01_to_2021-11-27_30.xlsx'
-    # print(f'Reading data from file => [{filename}]')
-    # df = utils.convert_excel_to_dataframe(filename)
-
-    strategy = init_strategy(params, df, my_exchange)
+    # strategy = init_strategy(params, df, my_exchange)
+    strategy = globals()[params['Strategy']](params, df, my_exchange)
     strategy.add_indicators_and_signals()
     strategy.process_trades()
+
 
 ##################################################################################
 ### Running the BackTesting
@@ -72,7 +69,8 @@ def main():
 
     # Create DataFrame to store results
     results_df = pd.DataFrame(
-        columns=['Test #', 'Exchange', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %', 'Taker Fee %',
+        columns=['Test #', 'Exchange', 'Symbol', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %',
+                 'Taker Fee %',
                  'Strategy', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
                  'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
     # print(results_df.to_string())
@@ -102,14 +100,14 @@ def main():
     # Save results to file
     results_df = results_df.set_index('Test #')
     if 'csv' in config.OUTPUT_FILE_FORMAT:
-        fname = config.RESULTS_PATH + '\\' + 'Statistics.csv'
-        results_df.to_csv(fname, index=True, header=True)
-        print(f'Stats file created => [{fname}]')
+        filename = config.RESULTS_PATH + '\\' + 'Statistics.csv'
+        results_df.to_csv(filename, index=True, header=True)
+        print(f'Stats file created => [{filename}]')
 
     if 'xlsx' in config.OUTPUT_FILE_FORMAT:
-        fname = config.RESULTS_PATH + '\\' + 'Statistics.xlsx'
-        results_df.to_excel(fname, index=True, header=True)
-        print(f'Stats file created => [{fname}]')
+        filename = config.RESULTS_PATH + '\\' + 'Statistics.xlsx'
+        results_df.to_excel(filename, index=True, header=True)
+        print(f'Stats file created => [{filename}]')
 
     # Display Results DataFrame to Console
     print(results_df.to_markdown())

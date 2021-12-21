@@ -14,5 +14,5 @@ SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
 SUPPORTED_EXCHANGES = ['Binance', 'ByBit']
 
 # Implemented Strategies
-IMPLEMENTED_STRATEGIES = ['MACD', 'Early MACD']
+IMPLEMENTED_STRATEGIES = ['MACD', 'EarlyMACD']
 

@@ -3,14 +3,14 @@ import datetime as dt
 
 import api_keys
 import utils
-from IExchange import IExchange
+from exchanges.IExchange import IExchange
 from binance.client import Client
+
 
 # Using: python-binance
 # https://python-binance.readthedocs.io/en/latest/index.html
 
-class ExchangeBinance(IExchange):
-
+class Binance(IExchange):
     NAME = 'Binance'
 
     # Dictionary of symbols used by exchange to define intervals for candle data
@@ -41,9 +41,16 @@ class ExchangeBinance(IExchange):
     #       We need to multiply and divide by 1000 to adjust for it
     def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
+        # Use locally saved data if it exists
+        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+        if cached_df is not None:
+            if verbose:
+                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            return cached_df
 
         if self.interval_map[interval] is None:
-            raise Exception(f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, W].')
+            raise Exception(
+                f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, W].')
 
         if verbose:
             print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
@@ -57,7 +64,8 @@ class ExchangeBinance(IExchange):
         start_datetime_stamp = start_time.timestamp() * 1000
         to_time_stamp = to_time.timestamp() * 1000
 
-        result = self.client.get_historical_klines(symbol, self.interval_map[interval], int(start_datetime_stamp), int(to_time_stamp), limit=1000)
+        result = self.client.get_historical_klines(symbol, self.interval_map[interval], int(start_datetime_stamp),
+                                                   int(to_time_stamp), limit=1000)
 
         # delete unwanted data - just keep date, open, high, low, close, volume
         for line in result:
@@ -69,7 +77,7 @@ class ExchangeBinance(IExchange):
         tmp_df.index = [dt.datetime.fromtimestamp(x / 1000) for x in tmp_df.date]
 
         # Drop rows that have a timestamp greater than to_time
-        #df = df[df.open_time <= int(to_time.timestamp())]
+        # df = df[df.open_time <= int(to_time.timestamp())]
 
         # Add symbol column
         tmp_df['symbol'] = symbol
@@ -90,10 +98,8 @@ class ExchangeBinance(IExchange):
 
         # Write to file
         if write_to_file:
-            utils.save_dataframe2file(test_num, self.NAME, symbol, from_time, to_time, interval, tmp_df,
-                                      exchange_data_file=True,
-                                      include_time=True if interval == '1' else False,
-                                      verbose=False)
+            self.save(symbol, from_time, to_time, interval, tmp_df, prior=include_prior,
+                      include_time=True if interval == '1' else False, verbose=False)
         return tmp_df
 
 # Testing Class

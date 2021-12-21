@@ -3,14 +3,14 @@ import pandas as pd
 import talib
 import datetime as dt
 
-from IStrategy import IStrategy
+from strategies.IStrategy import IStrategy
 
 # Abstract Exchange Class
 import stats
 import utils
 
-class StrategyEarlyMACD(IStrategy):
 
+class EarlyMACD(IStrategy):
     NAME = 'Early MACD'
 
     def __init__(self, params, df, my_exchange):
@@ -71,7 +71,8 @@ class StrategyEarlyMACD(IStrategy):
         # self.df.dropna(inplace=True)
 
         # Enter trade on the same candle as the crossing
-        self.df['trade_status'] = self.df.apply(lambda x: self.trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']), axis=1)
+        self.df['trade_status'] = self.df.apply(
+            lambda x: self.trade_entries(x['open'], x['ema200'], x['macdsignal'], x['cross']), axis=1)
 
         # Add and Initialize new columns
         self.df['entry_time'] = None
@@ -91,7 +92,7 @@ class StrategyEarlyMACD(IStrategy):
         to_time = to_time - dt.timedelta(minutes=1)
 
         minutes_df = self.my_exchange.get_candle_data(0, symbol, from_time, to_time, "1", include_prior=0,
-                                                 write_to_file=False, verbose=True)
+                                                      write_to_file=False, verbose=True)
 
         # Only keep the close column
         minutes_df = minutes_df[['close']]
@@ -131,7 +132,7 @@ class StrategyEarlyMACD(IStrategy):
         # print('\n')
 
         # Find first occurrence of crossing. Delta optional (add delta minutes)
-        price_on_crossing = 0.0 # Force float
+        price_on_crossing = 0.0  # Force float
         time_on_crossing = dt.datetime(1, 1, 1)
         close_col_index = result_df.columns.get_loc("close")
         for i, row in enumerate(result_df.itertuples(index=True), 0):
@@ -186,11 +187,11 @@ class StrategyEarlyMACD(IStrategy):
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
-                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Symbol'], start_time, end_time)
+                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Symbol'],
+                                                             start_time, end_time)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')
-
 
                 stop_loss = entry_price - (SL_PCT * entry_price)
                 take_profit = entry_price + (TP_PCT * entry_price)
@@ -286,7 +287,8 @@ class StrategyEarlyMACD(IStrategy):
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
-                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Symbol'], start_time, end_time)
+                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Symbol'],
+                                                             start_time, end_time)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')
@@ -376,13 +378,12 @@ class StrategyEarlyMACD(IStrategy):
                 # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
 
-        # Remove nulls
-        # self.df.dropna(inplace=True)
-        # self.df = self.df.loc[self.df['macd'] != None]
-        self.df = self.df.loc[self.df['macd'].apply(lambda x: x is not None)]
+        # Remove rows with nulls entries for macd or ema200
+        self.df = self.df.dropna(subset=['macd', 'ema200'])
 
         # Save trade details to file
-        utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'], self.params['From_Time'],
+        utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
+                                  self.params['From_Time'],
                                   self.params['To_Time'], self.params['Interval'], self.df, False, False, True)
 
         max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(self.df)
@@ -432,4 +433,3 @@ class StrategyEarlyMACD(IStrategy):
         )
 
         return self.df
-

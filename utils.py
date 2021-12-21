@@ -6,6 +6,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 import config
 
+
 ##################################################################################
 ### Change Timezone if Needed
 ##################################################################################
@@ -17,9 +18,9 @@ import config
 #     This gives a list of timezones: tzutil /l
 #     This will set the timezone: tzutil /s "Central America Standard Time"
 
-#os.system('tzutil /s "Eastern Standard Time"')
-#os.system('tzutil /s "Singapore Standard Time"')
-#time.strftime('%Y-%m-
+# os.system('tzutil /s "Eastern Standard Time"')
+# os.system('tzutil /s "Singapore Standard Time"')
+# time.strftime('%Y-%m-
 
 # Adjust from_time to include prior X entries for that interval for ema200
 def adjust_from_time(from_time, interval, include_prior):
@@ -27,7 +28,7 @@ def adjust_from_time(from_time, interval, include_prior):
 
     # Possible Values: 1 3 5 15 30 60 120 240 360 720 "D" "W"
     if interval not in ["1", "3", "5", "15", "30", "60", "120", "240", "360", "720", "D", "W"]:
-        return from_time
+        raise Exception(f'Invalid interval value: {interval}')
 
     if interval == 'W':
         from_time = from_time - timedelta(weeks=delta)
@@ -41,6 +42,7 @@ def adjust_from_time(from_time, interval, include_prior):
 # Convert an index value of type numpy.datetime64 to type datetime
 def idx2datetime(index_value):
     return dt.datetime.utcfromtimestamp(index_value.astype('O') / 1e9)
+
 
 def save_dataframe2file(test_num, exchange, symbol, from_time, to_time, interval, df,
                         exchange_data_file=False, include_time=False, verbose=True):
@@ -68,9 +70,10 @@ def save_dataframe2file(test_num, exchange, symbol, from_time, to_time, interval
     if 'xlsx' in config.OUTPUT_FILE_FORMAT:
         filename = filename + '.xlsx'
         df.to_excel(filename, index=True, header=True)
-        #to_excel_formatted(df, filename)
+        # to_excel_formatted(df, filename)
         if verbose:
             print(f'File created => [{filename}]')
+
 
 # TODO: Find a way to format the Excel workbook prior to saving to file
 def to_excel_formatted(df, filename):
@@ -86,11 +89,12 @@ def to_excel_formatted(df, filename):
 
     wb.save(filename)
 
+
 def convert_interval_to_min(interval):
-    if interval == 'W':
-        return 7 * 24 * 60
-    elif interval == 'D':
-        return 24 * 60
+    if interval == 'D':
+        return 1440
+    elif interval == 'W':
+        return 10080
     return int(interval)
 
 
@@ -115,3 +119,5 @@ def convert_excel_to_dataframe(filename):
     df = pd.DataFrame(data, index=idx, columns=cols)
 
     return df
+
+
