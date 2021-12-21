@@ -2,7 +2,7 @@
 api_keys.py
 .ipynb_checkpoints/
 __pycache__/
-Output/*
-!Output/.gitkeep
-ExchangeData/*
-!ExchangeData/*
+output/*
+!output/.gitkeep
+exchange_data/*
+!exchange_data/*
