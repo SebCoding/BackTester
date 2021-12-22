@@ -16,15 +16,9 @@ from strategies.IStrategy import IStrategy
 class EarlyMACD(IStrategy):
     NAME = 'Early MACD'
 
-    # Used to output on console a dot for each trade processed.
-    # Used as limited output progress bar
-    PROGRESS_COUNTER_MAX = 100
-    USE_DOT_PROGRESS_OUTPUT = True
-
     def __init__(self, params, df, my_exchange):
         super().__init__(params, df)
         self.my_exchange = my_exchange
-        self.progress_counter = 0
 
     # Force download of all minutes data for the specified time frame
     def cache_minutes_data(self):
@@ -75,7 +69,7 @@ class EarlyMACD(IStrategy):
 
     # Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
-        print('Adding indicators and Signals to Data.')
+        print('Adding indicators and signals to data.')
 
         # Set proper data types
         self.df['open'] = self.df['open'].astype(float)
@@ -208,14 +202,6 @@ class EarlyMACD(IStrategy):
 
         return time_on_crossing, price_on_crossing
 
-    def update_progress_dots(self):
-        if self.USE_DOT_PROGRESS_OUTPUT:
-            print('.', end='')
-            self.progress_counter += 1
-            if self.progress_counter > self.PROGRESS_COUNTER_MAX:
-                self.progress_counter = 0
-                print()
-
     # Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
         # entry_time = None
@@ -231,7 +217,6 @@ class EarlyMACD(IStrategy):
         total_losses = 0.0
         total_fees_paid = 0.0
 
-        execution_start = time.time()
         print(f'Processing trades using the [{self.NAME}] strategy')
 
         # Download locally all data for all minutes during time range (very slow)
@@ -514,6 +499,4 @@ class EarlyMACD(IStrategy):
             ignore_index=True,
         )
 
-        exec_time = time.time() - execution_start
-        print(f"Process Trades Execution Time: {exec_time:.1f}s\n")
         return self.df

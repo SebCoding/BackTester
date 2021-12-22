@@ -54,7 +54,7 @@ class MACD(IStrategy):
 
     # Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
-        print('Adding indicators and Signals to Data.')
+        print('Adding indicators and signals to data.')
 
         # Set proper data types
         self.df['open'] = self.df['open'].astype(float)
@@ -117,7 +117,6 @@ class MACD(IStrategy):
         total_losses = 0.0
         total_fees_paid = 0.0
 
-        execution_start = time.time()
         print(f'Processing trades using the [{self.NAME}] strategy')
 
         # We use numeric indexing to update values in the DataFrame
@@ -140,9 +139,9 @@ class MACD(IStrategy):
             # ------------------------------- Longs -------------------------------
             if trade_status == '' and row.trade_status == 'Enter Long':
 
-                # print(f'\nEntering Long: {row.Index}')
-                entry_price = row.open
+                self.update_progress_dots()
 
+                entry_price = row.open
                 stop_loss = entry_price - (SL_PCT * entry_price)
                 take_profit = entry_price + (TP_PCT * entry_price)
                 self.df.iloc[i, tp_col_index] = take_profit
@@ -233,9 +232,9 @@ class MACD(IStrategy):
             # ------------------------------- Shorts -------------------------------
             elif trade_status == '' and row.trade_status == 'Enter Short':
 
-                # print(f'\nEntering Short: {row.Index}')
-                entry_price = row.open
+                self.update_progress_dots()
 
+                entry_price = row.open
                 stop_loss = entry_price + (SL_PCT * entry_price)
                 take_profit = entry_price - (TP_PCT * entry_price)
                 self.df.iloc[i, tp_col_index] = take_profit
@@ -324,6 +323,8 @@ class MACD(IStrategy):
         # Remove rows with nulls entries for macd, macdsignal or ema200
         self.df = self.df.dropna(subset=['ema200'])
 
+        print() # Jump to next line
+
         # Save trade details to file
         utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
                                   self.params['From_Time'],
@@ -375,6 +376,4 @@ class MACD(IStrategy):
             ignore_index=True,
         )
 
-        exec_time = time.time() - execution_start
-        print(f"Process Trades Execution Time: {exec_time:.1f}s\n")
         return self.df

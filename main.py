@@ -1,3 +1,4 @@
+import time
 import warnings
 
 import pandas as pd
@@ -37,6 +38,7 @@ warnings.filterwarnings('ignore')
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
     print(f'---------------------------------------- TEST #{params["Test_Num"]} ----------------------------------------')
+    execution_start = time.time()
     # print_parameters(params, True)
     validate_params(params)
 
@@ -56,6 +58,9 @@ def backtest(params):
     strategy = globals()[params['Strategy']](params, df, my_exchange)
     strategy.add_indicators_and_signals()
     strategy.process_trades()
+
+    exec_time = time.time() - execution_start
+    print(f'Test #{params["Test_Num"]} Execution Time: {exec_time:.1f}s\n')
 
 
 ##################################################################################
