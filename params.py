@@ -36,6 +36,9 @@ def validate_params(params):
     if not isinstance(params['To_Time'], dt.datetime):
         raise Exception(f'Invalid Parameter: To_Time = [{params["To_Time"]}].')
 
+    if params['From_Time'] > params['To_Time']:
+        raise Exception(f'Invalid date range. {params["From_Time"]} must be <= {params["To_Time"]}.')
+
     if params["Interval"] not in ["1", "3", "5", "15", "30", "60", "120", "240", "360", "720", "D", "W"]:
         raise Exception(f'Invalid Parameter: Interval = [{params["Interval"]}].')
 

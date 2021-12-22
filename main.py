@@ -14,35 +14,12 @@ from params import validate_params, load_test_cases_from_file
 # Ignore warnings when reading xlsx file containing list of values for dropdown
 warnings.filterwarnings('ignore')
 
-
-# def init_exchange(params):
-#     match params['Exchange']:
-#         case 'Binance':
-#             return Binance()
-#         case 'ByBit':
-#             return ByBit()
-#         case _:
-#             raise Exception(f"Invalid Exchange: {params['Exchange']}.")
-#
-#
-# def init_strategy(params, df, my_exchange):
-#     match params['Strategy']:
-#         case 'MACD':
-#             return MACD(params, df)
-#         case 'EarlyMACD':
-#             return EarlyMACD(params, df, my_exchange)
-#         case _:
-#             raise Exception(f"Invalid Strategy: {params['Strategy']}.")
-
-
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
     print(f'---------------------------------------- TEST #{params["Test_Num"]} ----------------------------------------')
     execution_start = time.time()
-    # print_parameters(params, True)
     validate_params(params)
 
-    # my_exchange = init_exchange(params)
     my_exchange = globals()[params['Exchange']]()
     df = my_exchange.get_candle_data(params['Test_Num'], params['Symbol'],
                                      params['From_Time'], params['To_Time'], params['Interval'],
@@ -54,18 +31,12 @@ def backtest(params):
         print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={config.MIN_DATA_SIZE}. Unable to backtest strategy.')
         raise Exception("Unable to Run Strategy on Data Set")
 
-    # strategy = init_strategy(params, df, my_exchange)
     strategy = globals()[params['Strategy']](params, df, my_exchange)
     strategy.add_indicators_and_signals()
     strategy.process_trades()
 
     exec_time = time.time() - execution_start
     print(f'Test #{params["Test_Num"]} Execution Time: {exec_time:.1f}s\n')
-
-
-##################################################################################
-### Running the BackTesting
-##################################################################################
 
 def main():
     # Load test cases from Excel file

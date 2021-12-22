@@ -147,7 +147,7 @@ class MACD(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
-                entry_fee = self.params['Trade_Amount'] * TAKER_FEE_PCT
+                entry_fee = self.params['Trade_Amount'] * MAKER_FEE_PCT
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
 
@@ -240,7 +240,7 @@ class MACD(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
-                entry_fee = self.params['Trade_Amount'] * TAKER_FEE_PCT
+                entry_fee = self.params['Trade_Amount'] * MAKER_FEE_PCT
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
 

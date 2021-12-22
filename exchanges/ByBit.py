@@ -90,7 +90,7 @@ class ByBit(IExchange):
         df = df[df.open_time <= int(to_time.timestamp())]
 
         # Only keep relevant columns OHLC(V)
-        df = df[['symbol', 'open', 'close', 'high', 'low', 'volume']]
+        df = df[['symbol', 'open', 'high', 'low', 'close', 'volume']]
 
         # Set proper data types
         df['open'] = df['open'].astype(float)
