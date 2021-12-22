@@ -3,6 +3,7 @@ import datetime as dt
 import pandas as pd
 from pybit import HTTP
 
+import api_keys
 import utils
 from exchanges.IExchange import IExchange
 
@@ -27,19 +28,24 @@ class ByBit(IExchange):
 
     def __init__(self):
         super().__init__()
+        self.my_api_key = api_keys.BYBIT_API_KEY
+        self.my_api_secret_key = api_keys.BYBIT_API_SECRET
         self.my_api_endpoint = 'https://api.bybit.com'
         # Unauthenticated
         self.session_unauth = HTTP(endpoint=self.my_api_endpoint)
         # Authenticated
-        self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret)
+        self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret_key)
 
     def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
         # Use locally saved data if it exists
         cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+
+        from_time_str = from_time.strftime('%Y-%m-%d')
+        to_time_str = to_time.strftime('%Y-%m-%d')
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
         # The issue with ByBit API is that you can get a maximum of 200 bars from it.
@@ -47,7 +53,7 @@ class ByBit(IExchange):
 
         if verbose:
             # print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
-            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
 
         df_list = []
         start_time = from_time
@@ -62,8 +68,7 @@ class ByBit(IExchange):
         while last_datetime_stamp < to_time_stamp:
             # print(f'Fetching next 200 lines fromTime: {last_datetime_stamp} < to_time: {to_time}')
             # print(f'Fetching next 200 lines fromTime: {dt.datetime.fromtimestamp(last_datetime_stamp)} < to_time: {dt.datetime.fromtimestamp(to_time)}')
-            result = self.session_auth.query_kline(symbol=symbol, interval=interval, **{'from': last_datetime_stamp})[
-                'result']
+            result = self.session_auth.query_kline(symbol=symbol, interval=interval, **{'from': last_datetime_stamp})['result']
             tmp_df = pd.DataFrame(result)
 
             if tmp_df is None or (len(tmp_df.index) == 0):

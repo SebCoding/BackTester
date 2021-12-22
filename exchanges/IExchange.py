@@ -1,8 +1,4 @@
 from abc import ABC, abstractmethod
-
-import pandas as pd
-
-import api_keys
 from os.path import exists
 
 # Abstract Exchange Class
@@ -19,9 +15,7 @@ class IExchange(ABC):
     interval_map = None
 
     def __init__(self):
-        self.my_api_key = api_keys.BYBIT_API_KEY
-        self.my_api_secret = api_keys.BYBIT_API_SECRET
-        self.my_api_endpoint = None
+        super().__init__()
 
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     @abstractmethod
@@ -65,11 +59,11 @@ class IExchange(ABC):
         if 'csv' in config.OUTPUT_FILE_FORMAT:
             filename += '.csv'
             if exists(filename):
-                return pd.read_csv(filename)
+                return utils.read_csv_to_dataframe(filename)
         elif 'xlsx' in config.OUTPUT_FILE_FORMAT:
             filename += '.xlsx'
             if exists(filename):
-                return utils.convert_excel_to_dataframe(filename)
+                return utils.read_excel_to_dataframe(filename)
         else:
             return None
 

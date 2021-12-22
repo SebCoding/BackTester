@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore')
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
-    print(f'----------------------- TEST #{params["Test_Num"]} -----------------------')
+    print(f'---------------------------------------- TEST #{params["Test_Num"]} ----------------------------------------')
     # print_parameters(params, True)
     validate_params(params)
 

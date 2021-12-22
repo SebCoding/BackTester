@@ -1,6 +1,6 @@
 import numpy as np
 import datetime as dt
-from utils import convert_excel_to_dataframe
+from utils import read_excel_to_dataframe
 
 # Print parameter values.
 # 'all'=True prints all values
@@ -74,7 +74,7 @@ def validate_params(params):
 
 def load_test_cases_from_file(filename):
     print(f'Loading test cases from file => [{filename}]')
-    df = convert_excel_to_dataframe(filename)
+    df = read_excel_to_dataframe(filename)
 
     # Adjust column types
     df['Interval'] = df['Interval'].astype(str)

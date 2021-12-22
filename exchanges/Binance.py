@@ -39,13 +39,16 @@ class Binance(IExchange):
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     # Note: Binance uses 13 digit timestamps as opposed to 10 in our code.
     #       We need to multiply and divide by 1000 to adjust for it
-    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
-                        verbose=False):
+    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True, verbose=False):
         # Use locally saved data if it exists
-        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+        include_time = False if interval != "1" else True
+        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior, include_time=include_time)
+
+        from_time_str = from_time.strftime('%Y-%m-%d')
+        to_time_str = to_time.strftime('%Y-%m-%d')
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
         if self.interval_map[interval] is None:
@@ -53,7 +56,7 @@ class Binance(IExchange):
                 f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, W].')
 
         if verbose:
-            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
 
         start_time = from_time
 

@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pandas as pd
 import talib
@@ -115,7 +117,8 @@ class MACD(IStrategy):
         total_losses = 0.0
         total_fees_paid = 0.0
 
-        print(f'Processing Trades using the [{self.NAME}] strategy')
+        execution_start = time.time()
+        print(f'Processing trades using the [{self.NAME}] strategy')
 
         # We use numeric indexing to update values in the DataFrame
         # Find the column indexes
@@ -322,10 +325,9 @@ class MACD(IStrategy):
         self.df = self.df.dropna(subset=['ema200'])
 
         # Save trade details to file
-        utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
-                                  self.params['From_Time'], self.params['To_Time'], self.params['Interval'],
-                                  self.df,
-                                  exchange_data_file=False, include_time=False, verbose=True)
+        utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
+                                  self.params['From_Time'],
+                                  self.params['To_Time'], self.params['Interval'], self.df, False, True)
 
         max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(self.df)
 
@@ -373,4 +375,6 @@ class MACD(IStrategy):
             ignore_index=True,
         )
 
+        exec_time = time.time() - execution_start
+        print(f"Process Trades Execution Time: {exec_time:.1f}s\n")
         return self.df

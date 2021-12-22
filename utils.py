@@ -1,5 +1,7 @@
-from datetime import timedelta
 import datetime as dt
+from datetime import timedelta
+
+import dask.dataframe as dd
 import pandas as pd
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -8,9 +10,9 @@ import config
 
 
 ##################################################################################
-### Change Timezone if Needed
+# Change Timezone if Needed
 ##################################################################################
-## my_list simply unpacks the list elements and pass each one of them as parameters to the print function
+# my_list simply unpacks the list elements and pass each one of them as parameters to the print function
 # print(*pytz.all_timezones, sep='\n')
 
 # In windows command prompt try:
@@ -44,8 +46,7 @@ def idx2datetime(index_value):
     return dt.datetime.utcfromtimestamp(index_value.astype('O') / 1e9)
 
 
-def save_dataframe2file(test_num, exchange, symbol, from_time, to_time, interval, df,
-                        exchange_data_file=False, include_time=False, verbose=True):
+def save_trades_to_file(test_num, exchange, symbol, from_time, to_time, interval, df, include_time=False, verbose=True):
     test_num = str(test_num)
 
     if include_time:
@@ -56,11 +57,7 @@ def save_dataframe2file(test_num, exchange, symbol, from_time, to_time, interval
         to_str = to_time.strftime('%Y-%m-%d')
 
     filename = f'{exchange} {symbol} [{interval}] {from_str} to {to_str}'
-
-    if exchange_data_file:
-        filename = config.HISTORICAL_FILES_PATH + '\\' + filename
-    else:
-        filename = config.RESULTS_PATH + f'\\{test_num} ' + filename + ' Trades'
+    filename = config.RESULTS_PATH + f'\\{test_num} ' + filename + ' Trades'
 
     if 'csv' in config.OUTPUT_FILE_FORMAT:
         filename = filename + '.csv'
@@ -98,7 +95,7 @@ def convert_interval_to_min(interval):
     return int(interval)
 
 
-def convert_excel_to_dataframe(filename):
+def read_excel_to_dataframe(filename):
     wb = load_workbook(filename)
     ws = wb['Sheet1']
 
@@ -121,3 +118,20 @@ def convert_excel_to_dataframe(filename):
     return df
 
 
+def read_csv_to_dataframe(filename):
+    dask_df = dd.read_csv(filename, parse_dates=['Unnamed: 0']).set_index('Unnamed: 0')
+    df = dask_df.compute()
+    df.index.name = None
+    # print(f'from:{from_time} to:{to_time}')
+    # print(df.to_string())
+    return df
+
+
+def read_csv_to_dataframe_by_range(filename, from_time, to_time):
+    dask_df = dd.read_csv(filename, parse_dates=['Unnamed: 0']).set_index('Unnamed: 0')
+    dask_df = dask_df.loc[from_time:to_time]
+    df = dask_df.compute()
+    df.index.name = None
+    # print(f'from:{from_time} to:{to_time}')
+    # print(df.to_string())
+    return df

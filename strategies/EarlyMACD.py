@@ -1,39 +1,65 @@
+import datetime as dt
+import time
+from os.path import exists
+
 import numpy as np
 import pandas as pd
 import talib
-import datetime as dt
 
-from strategies.IStrategy import IStrategy
-
+import config
 # Abstract Exchange Class
 import stats
 import utils
+from strategies.IStrategy import IStrategy
 
 
 class EarlyMACD(IStrategy):
     NAME = 'Early MACD'
 
+    # Used to output on console a dot for each trade processed.
+    # Used as limited output progress bar
+    PROGRESS_COUNTER_MAX = 100
+    USE_DOT_PROGRESS_OUTPUT = True
+
     def __init__(self, params, df, my_exchange):
         super().__init__(params, df)
         self.my_exchange = my_exchange
+        self.progress_counter = 0
+
+    # Force download of all minutes data for the specified time frame
+    def cache_minutes_data(self):
+        filename = self.my_exchange.get_exchange_data_filename_no_ext(
+            self.params['Symbol'],
+            self.params['From_Time'],
+            self.params['To_Time'],
+            self.params['Interval'],
+            prior=0, include_time=True)
+        if not exists(filename):
+            minutes_df = self.my_exchange.get_candle_data(
+                0,
+                self.params['Symbol'],
+                self.params['From_Time'],
+                self.params['To_Time'],
+                "1", include_prior=0, write_to_file=True, verbose=True
+            )
 
     # ----------------------------------------------------------------------
     # Function used determine trade entries (long/short)
     # ----------------------------------------------------------------------
-    def trade_entries(self, trend, macdsignal, cross):
-        if trend == 'Up' and macdsignal < 0 and cross == -1:
-            return "Enter Long"
-        elif trend == 'Down' and macdsignal > 0 and cross == 1:
-            return "Enter Short"
-        return None
+    # def trade_entries(self, trend, macdsignal, cross):
+    #     if trend == 'Up' and macdsignal < 0 and cross == -1:
+    #         return "Enter Long"
+    #     elif trend == 'Down' and macdsignal > 0 and cross == 1:
+    #         return "Enter Short"
+    #     return None
 
     def mark_entries(self):
         # Mark long entries
         self.df.loc[
             (
-                (self.df['close'] > self.df['ema200']) &  # price > ema200
-                (self.df['macdsignal'] < 0) &  # macdsignal < 0
-                (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
+                    (self.df['close'] > self.df['ema200']) &  # price > ema200
+                    (self.df['macdsignal'] < 0) &  # macdsignal < 0
+                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
             ),
             'trade_status'] = 'Enter Long'
 
@@ -41,9 +67,9 @@ class EarlyMACD(IStrategy):
         # trend == 'Down' and macdsignal > 0 and cross == 1:
         self.df.loc[
             (
-                (self.df['close'] < self.df['ema200']) &  # price < ema200
-                (self.df['macdsignal'] > 0) &  # macdsignal > 0
-                (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
+                    (self.df['close'] < self.df['ema200']) &  # price < ema200
+                    (self.df['macdsignal'] > 0) &  # macdsignal > 0
+                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
             ),
             'trade_status'] = 'Enter Short'
 
@@ -81,8 +107,8 @@ class EarlyMACD(IStrategy):
         self.df['cross'] = self.df['O/U'].diff()
 
         # Enter trade on the same candle as the crossing
-        self.df['trade_status'] = self.df.apply(
-            lambda x: self.trade_entries(x['trend'], x['macdsignal'], x['cross']), axis=1)
+        # self.df['trade_status'] = self.df.apply(
+        #     lambda x: self.trade_entries(x['trend'], x['macdsignal'], x['cross']), axis=1)
 
         # Mark long/short entries
         self.mark_entries()
@@ -98,6 +124,29 @@ class EarlyMACD(IStrategy):
 
         return self.df
 
+    def get_minutes_from_cached_file(self, from_time, to_time):
+        # from_str = from_time.strftime('%Y-%m-%d %H.%M')
+        # to_str = to_time.strftime('%Y-%m-%d %H.%M')
+        # print(f'Fetching {self.params["Symbol"]} minute data from local cache. From[{from_str}], To[{to_str}]')
+        filename = self.my_exchange.get_exchange_data_filename_no_ext(
+            self.params['Symbol'],
+            self.params['From_Time'],
+            self.params['To_Time'],
+            "1",
+            prior=0,
+            include_time=True)
+
+        if 'csv' in config.OUTPUT_FILE_FORMAT:
+            filename += '.csv'
+            if exists(filename):
+                return utils.read_csv_to_dataframe_by_range(filename, from_time, to_time)
+        elif 'xlsx' in config.OUTPUT_FILE_FORMAT:
+            filename += '.xlsx'
+            if exists(filename):
+                return utils.read_excel_to_dataframe(filename).loc[from_time:to_time]
+        else:
+            return None
+
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
     def find_crossing(self, df, symbol, from_time, to_time, delta=0):
@@ -105,7 +154,9 @@ class EarlyMACD(IStrategy):
         to_time = to_time - dt.timedelta(minutes=1)
 
         minutes_df = self.my_exchange.get_candle_data(0, symbol, from_time, to_time, "1", include_prior=0,
-                                                      write_to_file=False, verbose=True)
+                                                      write_to_file=False, verbose=False)
+        # Used cached data (very slow)
+        # minutes_df = self.get_minutes_from_cached_file(from_time, to_time)
 
         # Only keep the close column
         minutes_df = minutes_df[['close']]
@@ -119,7 +170,7 @@ class EarlyMACD(IStrategy):
             df2 = df.copy()
             df2 = df2.append(row)
 
-            macd, macdsignal, macdhist= talib.MACD(df2['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+            macd, macdsignal, macdhist = talib.MACD(df2['close'], fastperiod=12, slowperiod=26, signalperiod=9)
             df2['macd'] = macd
             df2['macdsignal'] = macdsignal
 
@@ -157,6 +208,14 @@ class EarlyMACD(IStrategy):
 
         return time_on_crossing, price_on_crossing
 
+    def update_progress_dots(self):
+        if self.USE_DOT_PROGRESS_OUTPUT:
+            print('.', end='')
+            self.progress_counter += 1
+            if self.progress_counter > self.PROGRESS_COUNTER_MAX:
+                self.progress_counter = 0
+                print()
+
     # Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
         # entry_time = None
@@ -172,7 +231,11 @@ class EarlyMACD(IStrategy):
         total_losses = 0.0
         total_fees_paid = 0.0
 
-        print(f'Processing Trades using the [{self.NAME}] strategy')
+        execution_start = time.time()
+        print(f'Processing trades using the [{self.NAME}] strategy')
+
+        # Download locally all data for all minutes during time range (very slow)
+        # self.cache_minutes_data()
 
         # We use numeric indexing to update values in the DataFrame
         # Find the column indexes
@@ -195,6 +258,8 @@ class EarlyMACD(IStrategy):
 
             # ------------------------------- Longs -------------------------------
             if trade_status == '' and row.trade_status == 'Enter Long':
+
+                self.update_progress_dots()
 
                 # print(f'\nEntering Long: {row.Index}')
                 # Find exact crossing and price to the minute
@@ -296,6 +361,8 @@ class EarlyMACD(IStrategy):
             # ------------------------------- Shorts -------------------------------
             elif trade_status == '' and row.trade_status == 'Enter Short':
 
+                self.update_progress_dots()
+
                 # print(f'\nEntering Short: {row.Index}')
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
@@ -394,10 +461,12 @@ class EarlyMACD(IStrategy):
         # Remove rows with nulls entries for macd, macdsignal or ema200
         self.df = self.df.dropna(subset=['ema200'])
 
+        print() # Go to next line
+
         # Save trade details to file
-        utils.save_dataframe2file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
+        utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
                                   self.params['From_Time'],
-                                  self.params['To_Time'], self.params['Interval'], self.df, False, False, True)
+                                  self.params['To_Time'], self.params['Interval'], self.df, False, True)
 
         max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(self.df)
 
@@ -445,4 +514,6 @@ class EarlyMACD(IStrategy):
             ignore_index=True,
         )
 
+        exec_time = time.time() - execution_start
+        print(f"Process Trades Execution Time: {exec_time:.1f}s\n")
         return self.df
