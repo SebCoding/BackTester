@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 import warnings
 
@@ -74,14 +75,15 @@ def main():
         statistics_df = params['Statistics']
 
     # Save results to file
+    now = datetime.now().strftime('%Y-%m-%d (%H.%M.%S)')
     statistics_df = statistics_df.set_index('Test #')
     if 'csv' in config.OUTPUT_FILE_FORMAT:
-        filename = config.RESULTS_PATH + '\\' + 'Statistics.csv'
+        filename = config.RESULTS_PATH + '\\' + f'Statistics - {now}.csv'
         statistics_df.to_csv(filename, index=True, header=True)
         print(f'Stats file created => [{filename}]')
 
     if 'xlsx' in config.OUTPUT_FILE_FORMAT:
-        filename = config.RESULTS_PATH + '\\' + 'Statistics.xlsx'
+        filename = config.RESULTS_PATH + '\\' + f'Statistics - {now}.xlsx'
         statistics_df.to_excel(filename, index=True, header=True)
         print(f'Stats file created => [{filename}]')
 
