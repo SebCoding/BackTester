@@ -26,18 +26,22 @@ import config
 
 # Adjust from_time to include prior X entries for that interval for ema200
 def adjust_from_time(from_time, interval, include_prior):
-    delta = include_prior - 1
-
-    # Possible Values: 1 3 5 15 30 60 120 240 360 720 "D" "W"
-    if interval not in ["1", "3", "5", "15", "30", "60", "120", "240", "360", "720", "D", "W"]:
+    if interval not in config.VALID_INTERVALS:
         raise Exception(f'Invalid interval value: {interval}')
 
-    if interval == 'W':
-        from_time = from_time - timedelta(weeks=delta)
-    elif interval == 'D':
-        from_time = from_time - timedelta(days=delta)
-    else:
+    delta = include_prior - 1
+    if 'm' in interval:
+        interval = interval.replace('m', '')
         from_time = from_time - timedelta(minutes=int(interval) * delta)
+    elif 'h' in interval:
+        interval = interval.replace('h', '')
+        from_time = from_time - timedelta(hours=int(interval) * delta)
+    elif 'd' in interval:
+        interval = interval.replace('d', '')
+        from_time = from_time - timedelta(days=delta)
+    elif 'w' in interval:
+        interval = interval.replace('w', '')
+        from_time = from_time - timedelta(weeks=delta)
     return from_time
 
 
@@ -46,7 +50,7 @@ def idx2datetime(index_value):
     return dt.datetime.utcfromtimestamp(index_value.astype('O') / 1e9)
 
 
-def save_trades_to_file(test_num, exchange, symbol, from_time, to_time, interval, df, include_time=False, verbose=True):
+def save_trades_to_file(test_num, exchange, pair, from_time, to_time, interval, df, include_time=False, verbose=True):
     test_num = str(test_num)
 
     if include_time:
@@ -56,7 +60,7 @@ def save_trades_to_file(test_num, exchange, symbol, from_time, to_time, interval
         from_str = from_time.strftime('%Y-%m-%d')
         to_str = to_time.strftime('%Y-%m-%d')
 
-    filename = f'{exchange} {symbol} [{interval}] {from_str} to {to_str}'
+    filename = f'{exchange} {pair} [{interval}] {from_str} to {to_str}'
     filename = config.RESULTS_PATH + f'\\{test_num} ' + filename + ' Trades'
 
     if 'csv' in config.OUTPUT_FILE_FORMAT:
@@ -88,11 +92,23 @@ def to_excel_formatted(df, filename):
 
 
 def convert_interval_to_min(interval):
-    if interval == 'D':
-        return 1440
-    elif interval == 'W':
-        return 10080
-    return int(interval)
+    if interval not in config.VALID_INTERVALS:
+        raise Exception(f'Invalid interval value: {interval}')
+
+    if 'm' in interval:
+        interval = interval.replace('m', '')
+        return int(interval)
+    elif 'h' in interval:
+        interval = interval.replace('h', '')
+        return int(interval) * 60
+    elif 'd' in interval:
+        interval = interval.replace('d', '')
+        return int(interval) * 1440
+    elif 'w' in interval:
+        interval = interval.replace('w', '')
+        return int(interval) * 10080
+    else:
+        return 0
 
 
 def read_excel_to_dataframe(filename):

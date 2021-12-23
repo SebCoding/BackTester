@@ -10,7 +10,8 @@ class IStrategy(ABC):
     PROGRESS_COUNTER_MAX = 100
     USE_DOT_PROGRESS_OUTPUT = True
 
-    def __init__(self, params, df):
+    def __init__(self, exchange, params, df):
+        self.exchange = exchange
         self.params = params
         self.df = df
         self.progress_counter = 0

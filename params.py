@@ -14,15 +14,13 @@ def print_parameters(params, all=False):
         print('-------------------------------------------------------')
     else:
         print('-------------------------------------------------------')
-        print(f'SYMBOL: {params["Symbol"]}')
+        print(f'PAIR: {params["Pair"]}')
         print(f'FROM_TIME: {params["From_Time"]}')
         print(f'TO_TIME: {params["To_Time"]}')
         print(f'INTERVAL: {params["Interval"]}')
         print(f'TRADE_AMOUNT: {params["Trade_Amount"]}')
         print(f'TAKE_PROFIT_PCT: {params["Take_Profit_PCT"]}%')
         print(f'STOP_LOSS_PCT: {params["Stop_Loss_PCT"]}%')
-        print(f'MAKER_FEE_PCT: {params["Maker_Fee_PCT"]}%')
-        print(f'TAKER_FEE_PCT: {params["Taker_Fee_PCT"]}%')
         print('-------------------------------------------------------')
 
 
@@ -39,7 +37,7 @@ def validate_params(params):
     if params['From_Time'] > params['To_Time']:
         raise Exception(f'Invalid date range. {params["From_Time"]} must be <= {params["To_Time"]}.')
 
-    if params["Interval"] not in ["1", "3", "5", "15", "30", "60", "120", "240", "360", "720", "D", "W"]:
+    if params["Interval"] not in config.VALID_INTERVALS:
         raise Exception(f'Invalid Parameter: Interval = [{params["Interval"]}].')
 
     trade_amount = params["Trade_Amount"]
@@ -54,14 +52,6 @@ def validate_params(params):
     stop_loss_pct = params["Stop_Loss_PCT"]
     if not isinstance(stop_loss_pct, float) or stop_loss_pct <= 0:
         raise Exception(f'Invalid Parameter: Stop_Loss_PCT = [{stop_loss_pct}]. Must be a positive value of type float.')
-
-    maker_fee_pct = params["Maker_Fee_PCT"]
-    if not isinstance(maker_fee_pct, float):
-        raise Exception(f'Invalid Parameter: Maker_Fee_PCT = [{maker_fee_pct}]. Must be a value of type float.')
-
-    taker_fee_pct = params["Taker_Fee_PCT"]
-    if not isinstance(taker_fee_pct, float):
-        raise Exception(f'Invalid Parameter: Taker_Fee_PCT = [{taker_fee_pct}]. Must be a value of type float.')
 
     if params['Strategy'] not in config.IMPLEMENTED_STRATEGIES:
         raise Exception(f'Invalid Parameter: Unsupported Strategy = [{params["Strategy"]}]')
@@ -84,8 +74,4 @@ def load_test_cases_from_file(filename):
     df['Trade Amount'] = df['Trade Amount'].astype(float)
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
-    df['Maker Fee %'] = df['Maker Fee %'].astype(float)
-    df['Taker Fee %'] = df['Taker Fee %'].astype(float)
-    # Convert str to bool. astype(bool) does not work
-    #df['Precision Crossing'] = np.where(df['Precision Crossing'] == 'True', True, False)
     return df

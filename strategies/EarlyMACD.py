@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import talib
 
+from enums.TradeStatus import TradeStatuses
+
 import config
 # Abstract Exchange Class
 import stats
@@ -16,22 +18,21 @@ from strategies.IStrategy import IStrategy
 class EarlyMACD(IStrategy):
     NAME = 'Early MACD'
 
-    def __init__(self, params, df, my_exchange):
-        super().__init__(params, df)
-        self.my_exchange = my_exchange
+    def __init__(self, exchange, params, df):
+        super().__init__(exchange, params, df)
 
     # Force download of all minutes data for the specified time frame
     def cache_minutes_data(self):
-        filename = self.my_exchange.get_exchange_data_filename_no_ext(
-            self.params['Symbol'],
+        filename = self.exchange.get_exchange_data_filename_no_ext(
+            self.params['Pair'],
             self.params['From_Time'],
             self.params['To_Time'],
             self.params['Interval'],
             prior=0, include_time=True)
         if not exists(filename):
-            minutes_df = self.my_exchange.get_candle_data(
+            minutes_df = self.exchange.get_candle_data(
                 0,
-                self.params['Symbol'],
+                self.params['Pair'],
                 self.params['From_Time'],
                 self.params['To_Time'],
                 "1", include_prior=0, write_to_file=True, verbose=True
@@ -55,7 +56,7 @@ class EarlyMACD(IStrategy):
                     (self.df['macdsignal'] < 0) &  # macdsignal < 0
                     (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
             ),
-            'trade_status'] = 'Enter Long'
+            'trade_status'] = TradeStatuses.EnterLong
 
         # Mark short entries
         # trend == 'Down' and macdsignal > 0 and cross == 1:
@@ -65,7 +66,7 @@ class EarlyMACD(IStrategy):
                     (self.df['macdsignal'] > 0) &  # macdsignal > 0
                     (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
             ),
-            'trade_status'] = 'Enter Short'
+            'trade_status'] = TradeStatuses.EnterShort
 
     # Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
@@ -79,7 +80,7 @@ class EarlyMACD(IStrategy):
         self.df['volume'] = self.df['volume'].astype(float)
 
         # Keep only this list of columns, delete all other columns
-        final_table_columns = ['symbol', 'interval', 'open', 'high', 'low', 'close']
+        final_table_columns = ['pair', 'interval', 'open', 'high', 'low', 'close']
         self.df = self.df[self.df.columns.intersection(final_table_columns)]
 
         # MACD - Moving Average Convergence/Divergence
@@ -121,9 +122,9 @@ class EarlyMACD(IStrategy):
     def get_minutes_from_cached_file(self, from_time, to_time):
         # from_str = from_time.strftime('%Y-%m-%d %H.%M')
         # to_str = to_time.strftime('%Y-%m-%d %H.%M')
-        # print(f'Fetching {self.params["Symbol"]} minute data from local cache. From[{from_str}], To[{to_str}]')
-        filename = self.my_exchange.get_exchange_data_filename_no_ext(
-            self.params['Symbol'],
+        # print(f'Fetching {self.params["Pair"]} minute data from local cache. From[{from_str}], To[{to_str}]')
+        filename = self.exchange.get_exchange_data_filename_no_ext(
+            self.params['Pair'],
             self.params['From_Time'],
             self.params['To_Time'],
             "1",
@@ -143,12 +144,12 @@ class EarlyMACD(IStrategy):
 
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
-    def find_crossing(self, df, symbol, from_time, to_time, delta=0):
+    def find_crossing(self, df, pair, from_time, to_time, delta=0):
         # We need to get an extra row to see the value at -1min in case the cross is on the first row
         to_time = to_time - dt.timedelta(minutes=1)
 
-        minutes_df = self.my_exchange.get_candle_data(0, symbol, from_time, to_time, "1", include_prior=0,
-                                                      write_to_file=False, verbose=False)
+        minutes_df = self.exchange.get_candle_data(0, pair, from_time, to_time, "1m", include_prior=0,
+                                                   write_to_file=False, verbose=False)
         # Used cached data (very slow)
         # minutes_df = self.get_minutes_from_cached_file(from_time, to_time)
 
@@ -236,13 +237,13 @@ class EarlyMACD(IStrategy):
         interval = utils.convert_interval_to_min(self.params['Interval'])
         TP_PCT = self.params['Take_Profit_PCT'] / 100
         SL_PCT = self.params['Stop_Loss_PCT'] / 100
-        MAKER_FEE_PCT = self.params['Maker_Fee_PCT'] / 100
-        TAKER_FEE_PCT = self.params['Taker_Fee_PCT'] / 100
+        MAKER_FEE_PCT = self.exchange.MAKER_FEE_PCT / 100
+        TAKER_FEE_PCT = self.exchange.TAKER_FEE_PCT / 100
 
         for i, row in enumerate(self.df.itertuples(index=True), 0):
 
             # ------------------------------- Longs -------------------------------
-            if trade_status == '' and row.trade_status == 'Enter Long':
+            if trade_status == '' and row.trade_status == TradeStatuses.EnterLong:
 
                 self.update_progress_dots()
 
@@ -250,7 +251,7 @@ class EarlyMACD(IStrategy):
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
-                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Symbol'],
+                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Pair'],
                                                              start_time, end_time)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
@@ -268,7 +269,7 @@ class EarlyMACD(IStrategy):
                 # We exit in the same candle we entered, hit stop loss
                 if row.low <= stop_loss:
                     loss = self.params['Trade_Amount'] * SL_PCT * -1
-                    self.df.iloc[i, trade_status_col_index] = 'Enter/Exit Long'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
                     self.df.iloc[i, losses_col_index] = loss
                     total_losses += loss
                     trade_status = ''
@@ -281,7 +282,7 @@ class EarlyMACD(IStrategy):
                 # We exit in the same candle we entered, take profit
                 elif row.high >= take_profit:
                     win = self.params['Trade_Amount'] * TP_PCT
-                    self.df.iloc[i, trade_status_col_index] = 'Enter/Exit Long'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
                     self.df.iloc[i, wins_col_index] = win
                     total_wins += win
                     trade_status = ''
@@ -291,14 +292,14 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
 
-                # We just entered 'Enter long' in this candle so set the status to 'Long'
+                # We just entered TradeStatuses.EnterLong in this candle so set the status to TradeStatuses.Long
                 else:
-                    trade_status = 'Long'
+                    trade_status = TradeStatuses.Long
 
-            elif trade_status in ['Long'] and pd.isnull(row.trade_status):
+            elif trade_status in [TradeStatuses.Long] and pd.isnull(row.trade_status):
                 if row.low <= stop_loss:
                     loss = self.params['Trade_Amount'] * SL_PCT * -1
-                    self.df.iloc[i, trade_status_col_index] = 'Exit Long'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitLong
                     self.df.iloc[i, losses_col_index] = loss
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
@@ -313,7 +314,7 @@ class EarlyMACD(IStrategy):
                     total_fees_paid += exit_fee
                 elif row.high >= take_profit:
                     win = self.params['Trade_Amount'] * TP_PCT
-                    self.df.iloc[i, trade_status_col_index] = 'Exit Long'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitLong
                     self.df.iloc[i, wins_col_index] = win
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
@@ -327,24 +328,25 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 else:
-                    self.df.iloc[i, trade_status_col_index] = 'Long'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.Long
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                     self.df.iloc[i, entry_price_col_index] = entry_price
-                    trade_status = 'Long'
+                    trade_status = TradeStatuses.Long
 
-            elif trade_status in ['Long'] and row.trade_status in ['Enter Long', 'Enter Short']:
-                # If we are in a long and encounter another 'Enter Long' or a 'Enter Short' signal,
-                # ignore the signal and override the value with 'Long', we are already in a 'Long' trade
-                self.df.iloc[i, trade_status_col_index] = 'Long'
+            elif trade_status in [TradeStatuses.Long] and row.trade_status in [TradeStatuses.EnterLong,
+                                                                               TradeStatuses.EnterShort]:
+                # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort signal,
+                # ignore the signal and override the value with TradeStatuses.Long, we are already in a TradeStatuses.Long trade
+                self.df.iloc[i, trade_status_col_index] = TradeStatuses.Long
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
 
             # ------------------------------- Shorts -------------------------------
-            elif trade_status == '' and row.trade_status == 'Enter Short':
+            elif trade_status == '' and row.trade_status == TradeStatuses.EnterShort:
 
                 self.update_progress_dots()
 
@@ -352,7 +354,7 @@ class EarlyMACD(IStrategy):
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
-                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Symbol'],
+                entry_time, entry_price = self.find_crossing(self.df[['close']].iloc[0:i], self.params['Pair'],
                                                              start_time, end_time)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
@@ -370,7 +372,7 @@ class EarlyMACD(IStrategy):
                 # We exit in the same candle we entered, hit stop loss
                 if row.high >= stop_loss:
                     loss = SL_PCT * self.params['Trade_Amount'] * -1
-                    self.df.iloc[i, trade_status_col_index] = 'Enter/Exit Short'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
                     self.df.iloc[i, losses_col_index] = loss
                     total_losses += loss
                     trade_status = ''
@@ -382,7 +384,7 @@ class EarlyMACD(IStrategy):
                 # We exit in the same candle we entered, hit take profit
                 elif row.low <= take_profit:
                     win = self.params['Trade_Amount'] * TP_PCT
-                    self.df.iloc[i, trade_status_col_index] = 'Enter/Exit Short'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
                     self.df.iloc[i, wins_col_index] = win
                     total_wins += win
                     trade_status = ''
@@ -391,14 +393,14 @@ class EarlyMACD(IStrategy):
                     exit_fee = (self.params['Trade_Amount'] - win) * MAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
-                # We just entered 'Enter Short' in this candle, so set the status to 'Short'
+                # We just entered TradeStatuses.EnterShort in this candle, so set the status to TradeStatuses.Short
                 else:
-                    trade_status = 'Short'
+                    trade_status = TradeStatuses.Short
 
-            elif trade_status in ['Short'] and pd.isnull(row.trade_status):
+            elif trade_status in [TradeStatuses.Short] and pd.isnull(row.trade_status):
                 if row.high >= stop_loss:
                     loss = SL_PCT * self.params['Trade_Amount'] * -1
-                    self.df.iloc[i, trade_status_col_index] = 'Exit Short'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitShort
                     self.df.iloc[i, losses_col_index] = loss
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
@@ -413,7 +415,7 @@ class EarlyMACD(IStrategy):
                     total_fees_paid += exit_fee
                 elif row.low <= take_profit:
                     win = self.params['Trade_Amount'] * TP_PCT
-                    self.df.iloc[i, trade_status_col_index] = 'Exit Short'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitShort
                     self.df.iloc[i, wins_col_index] = win
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
@@ -427,17 +429,18 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 else:
-                    self.df.iloc[i, trade_status_col_index] = 'Short'
+                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.Short
                     self.df.iloc[i, tp_col_index] = take_profit
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                     self.df.iloc[i, entry_price_col_index] = entry_price
-                    trade_status = 'Short'
+                    trade_status = TradeStatuses.Short
 
-            elif trade_status in ['Short'] and row.trade_status in ['Enter Long', 'Enter Short']:
-                # If we are in a long and encounter another 'Enter Long' or a 'Enter Short' signal,
-                # ignore the signal and override the value with 'Long', we are already in a 'Short' trade
-                self.df.iloc[i, trade_status_col_index] = 'Short'
+            elif trade_status in [TradeStatuses.Short] and row.trade_status in [TradeStatuses.EnterLong,
+                                                                                TradeStatuses.EnterShort]:
+                # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort signal,
+                # ignore the signal and override the value with TradeStatuses.Long, we are already in a TradeStatuses.Short trade
+                self.df.iloc[i, trade_status_col_index] = TradeStatuses.Short
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
@@ -446,10 +449,10 @@ class EarlyMACD(IStrategy):
         # Remove rows with nulls entries for macd, macdsignal or ema200
         self.df = self.df.dropna(subset=['ema200'])
 
-        print() # Go to next line
+        print()  # Go to next line
 
         # Save trade details to file
-        utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Symbol'],
+        utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Pair'],
                                   self.params['From_Time'],
                                   self.params['To_Time'], self.params['Interval'], self.df, False, True)
 
@@ -470,19 +473,19 @@ class EarlyMACD(IStrategy):
         # Store results in Results DataFrame
         total_trades = nb_wins + nb_losses
         success_rate = (nb_wins / total_trades * 100) if total_trades != 0 else 0
-        self.params['Results'] = self.params['Results'].append(
+        self.params['Statistics'] = self.params['Statistics'].append(
             {
                 'Test #': self.params['Test_Num'],
                 'Exchange': self.params['Exchange'],
-                'Symbol': self.params['Symbol'],
+                'Pair': self.params['Pair'],
                 'From': self.params['From_Time'].strftime("%Y-%m-%d"),
                 'To': self.params['To_Time'].strftime("%Y-%m-%d"),
                 'Interval': self.params['Interval'],
                 'Amount': self.params['Trade_Amount'],
                 'TP %': self.params['Take_Profit_PCT'],
                 'SL %': self.params['Stop_Loss_PCT'],
-                'Maker Fee %': self.params['Maker_Fee_PCT'],
-                'Taker Fee %': self.params['Taker_Fee_PCT'],
+                'Maker Fee %': self.exchange.MAKER_FEE_PCT,
+                'Taker Fee %': self.exchange.TAKER_FEE_PCT,
                 'Strategy': self.params['Strategy'],
 
                 'Wins': nb_wins,

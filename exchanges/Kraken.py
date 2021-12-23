@@ -19,7 +19,7 @@ class Kraken(Exchange):
 
     NAME = 'Kraken'
 
-    # Dictionary of symbols used by exchange to define intervals for candle data
+    # Dictionary of pairs used by exchange to define intervals for candle data
     # Kraken interval minutes (optional): 1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
     interval_map = {
         "1": 1,
@@ -41,20 +41,20 @@ class Kraken(Exchange):
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     # Note: Binance uses 13 digit timestamps as opposed to 10 in our code.
     #       We need to multiply and divide by 1000 to adjust for it
-    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
+    def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
         # Use locally saved data if it exists
-        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+        cached_df = self.get_cached_exchange_data(pair, from_time, to_time, interval, prior=include_prior)
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+                print(f'Using locally cached data for {pair} from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
             return cached_df
 
         if self.interval_map[interval] is None:
             raise Exception(f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 5, 15, 30, 60, 240, D, W].')
 
         if verbose:
-            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
+            print(f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time}], To[{to_time}]')
 
         start_time = from_time
 
@@ -65,7 +65,7 @@ class Kraken(Exchange):
         start_datetime_stamp = start_time.timestamp() * 1000
         to_time_stamp = to_time.timestamp() * 1000
 
-        result = self.client.get_historical_klines(symbol, self.interval_map[interval], int(start_datetime_stamp), int(to_time_stamp), limit=1000)
+        result = self.client.get_historical_klines(pair, self.interval_map[interval], int(start_datetime_stamp), int(to_time_stamp), limit=1000)
 
         # delete unwanted data - just keep date, open, high, low, close, volume
         for line in result:
@@ -79,11 +79,11 @@ class Kraken(Exchange):
         # Drop rows that have a timestamp greater than to_time
         #df = df[df.open_time <= int(to_time.timestamp())]
 
-        # Add symbol column
-        tmp_df['symbol'] = symbol
+        # Add pair column
+        tmp_df['pair'] = pair
 
         # Only keep relevant columns OHLC(V)
-        tmp_df = tmp_df[['symbol', 'open', 'close', 'high', 'low', 'volume']]
+        tmp_df = tmp_df[['pair', 'open', 'close', 'high', 'low', 'volume']]
 
         # Set proper data types
         tmp_df['open'] = tmp_df['open'].astype(float)
@@ -98,7 +98,7 @@ class Kraken(Exchange):
 
         # Write to file
         if write_to_file:
-            self.save(symbol, from_time, to_time, interval, tmp_df, prior=include_prior,
+            self.save(pair, from_time, to_time, interval, tmp_df, prior=include_prior,
                       include_time=True if interval == '1' else False, verbose=False)
         return tmp_df
 

@@ -11,19 +11,23 @@ from exchanges.IExchange import IExchange
 class ByBit(IExchange):
     NAME = 'ByBit'
 
+    # Modify maker/taker fees here for the ByBit exchange
+    MAKER_FEE_PCT = -0.025
+    TAKER_FEE_PCT = 0.075
+
     interval_map = {
-        "1": "1",
-        "3": "3",
-        "5": "5",
-        "15": "15",
-        "30": "30",
-        "60": "60",  # 1 Hour
-        "120": "120",  # 2 Hours
-        "240": "240",  # 4 Hours
-        "360": "360",  # 6 Hours
-        "720": '720',  # 12 Hours
-        "D": "D",
-        "W": "W"
+        "1m": "1",
+        "3m": "3",
+        "5m": "5",
+        "15m": "15",
+        "30m": "30",
+        "1h": "60",  # 1 Hour
+        "2h": "120",  # 2 Hours
+        "4h": "240",  # 4 Hours
+        "6h": "360",  # 6 Hours
+        "12h": '720',  # 12 Hours
+        "1d": "D",
+        "1w": "W"
     }
 
     def __init__(self):
@@ -36,24 +40,26 @@ class ByBit(IExchange):
         # Authenticated
         self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret_key)
 
-    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True,
+    def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
+        self.validate_interval(interval)
+
         # Use locally saved data if it exists
-        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior)
+        cached_df = self.get_cached_exchange_data(pair, from_time, to_time, interval, prior=include_prior)
 
         from_time_str = from_time.strftime('%Y-%m-%d')
         to_time_str = to_time.strftime('%Y-%m-%d')
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+                print(f'Using locally cached data for {pair} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
         # The issue with ByBit API is that you can get a maximum of 200 bars from it.
         # So if you need to get data for a large portion of the time you have to call it multiple times.
 
         if verbose:
-            # print(f'Fetching {symbol} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
-            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+            # print(f'Fetching {pair} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
+            print(f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
 
         df_list = []
         start_time = from_time
@@ -66,9 +72,7 @@ class ByBit(IExchange):
         to_time_stamp = to_time.timestamp()
 
         while last_datetime_stamp < to_time_stamp:
-            # print(f'Fetching next 200 lines fromTime: {last_datetime_stamp} < to_time: {to_time}')
-            # print(f'Fetching next 200 lines fromTime: {dt.datetime.fromtimestamp(last_datetime_stamp)} < to_time: {dt.datetime.fromtimestamp(to_time)}')
-            result = self.session_auth.query_kline(symbol=symbol, interval=interval, **{'from': last_datetime_stamp})['result']
+            result = self.session_auth.query_kline(symbol=pair, interval=self.interval_map[interval], **{'from': last_datetime_stamp})['result']
             tmp_df = pd.DataFrame(result)
 
             if tmp_df is None or (len(tmp_df.index) == 0):
@@ -90,7 +94,8 @@ class ByBit(IExchange):
         df = df[df.open_time <= int(to_time.timestamp())]
 
         # Only keep relevant columns OHLC(V)
-        df = df[['symbol', 'open', 'high', 'low', 'close', 'volume']]
+        df.rename(columns = {'symbol':'pair'}, inplace = True)
+        df = df[['pair', 'open', 'high', 'low', 'close', 'volume']]
 
         # Set proper data types
         df['open'] = df['open'].astype(float)
@@ -101,8 +106,8 @@ class ByBit(IExchange):
 
         # Write to file
         if write_to_file:
-            self.save(symbol, from_time, to_time, interval, df, prior=include_prior,
-                      include_time=True if interval == '1' else False, verbose=False)
+            self.save_candle_data(pair, from_time, to_time, interval, df, prior=include_prior,
+                                  include_time=True if interval == '1' else False, verbose=False)
         return df
 
 # Testing Class

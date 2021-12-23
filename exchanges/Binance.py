@@ -13,19 +13,23 @@ from binance.client import Client
 class Binance(IExchange):
     NAME = 'Binance'
 
-    # Dictionary of symbols used by exchange to define intervals for candle data
+    # Modify maker/taker fees here for the ByBit exchange
+    MAKER_FEE_PCT = 0.02
+    TAKER_FEE_PCT = 0.04
+
+    # Dictionary of pairs used by exchange to define intervals for candle data
     # Binance valid intervals - 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M
     interval_map = {
-        "1": Client.KLINE_INTERVAL_1MINUTE,
-        "3": Client.KLINE_INTERVAL_3MINUTE,
-        "5": Client.KLINE_INTERVAL_5MINUTE,
-        "15": Client.KLINE_INTERVAL_15MINUTE,
-        "30": Client.KLINE_INTERVAL_30MINUTE,
-        "60": Client.KLINE_INTERVAL_1HOUR,
-        "120": Client.KLINE_INTERVAL_2HOUR,
-        "240": Client.KLINE_INTERVAL_4HOUR,
-        "360": Client.KLINE_INTERVAL_6HOUR,
-        "720": Client.KLINE_INTERVAL_12HOUR,
+        "1m": Client.KLINE_INTERVAL_1MINUTE,
+        "3m": Client.KLINE_INTERVAL_3MINUTE,
+        "5m": Client.KLINE_INTERVAL_5MINUTE,
+        "15m": Client.KLINE_INTERVAL_15MINUTE,
+        "30m": Client.KLINE_INTERVAL_30MINUTE,
+        "1h": Client.KLINE_INTERVAL_1HOUR,
+        "2h": Client.KLINE_INTERVAL_2HOUR,
+        "4h": Client.KLINE_INTERVAL_4HOUR,
+        "6h": Client.KLINE_INTERVAL_6HOUR,
+        "12h": Client.KLINE_INTERVAL_12HOUR,
         "D": Client.KLINE_INTERVAL_1DAY,
         "W": Client.KLINE_INTERVAL_1WEEK
     }
@@ -39,24 +43,22 @@ class Binance(IExchange):
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     # Note: Binance uses 13 digit timestamps as opposed to 10 in our code.
     #       We need to multiply and divide by 1000 to adjust for it
-    def get_candle_data(self, test_num, symbol, from_time, to_time, interval, include_prior=0, write_to_file=True, verbose=False):
+    def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True, verbose=False):
+        self.validate_interval(interval)
+
         # Use locally saved data if it exists
         include_time = False if interval != "1" else True
-        cached_df = self.get_cached_exchange_data(symbol, from_time, to_time, interval, prior=include_prior, include_time=include_time)
+        cached_df = self.get_cached_exchange_data(pair, from_time, to_time, interval, prior=include_prior, include_time=include_time)
 
         from_time_str = from_time.strftime('%Y-%m-%d')
         to_time_str = to_time.strftime('%Y-%m-%d')
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {symbol} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+                print(f'Using locally cached data for {pair} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
-        if self.interval_map[interval] is None:
-            raise Exception(
-                f'Unsupported interval[{interval} for {self.NAME}.\nExpecting a value in minutes from the following list: [1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, W].')
-
         if verbose:
-            print(f'Fetching {symbol} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+            print(f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
 
         start_time = from_time
 
@@ -67,7 +69,7 @@ class Binance(IExchange):
         start_datetime_stamp = start_time.timestamp() * 1000
         to_time_stamp = to_time.timestamp() * 1000
 
-        result = self.client.get_historical_klines(symbol, self.interval_map[interval], int(start_datetime_stamp),
+        result = self.client.get_historical_klines(pair, self.interval_map[interval], int(start_datetime_stamp),
                                                    int(to_time_stamp), limit=1000)
 
         # delete unwanted data - just keep date, open, high, low, close, volume
@@ -82,11 +84,11 @@ class Binance(IExchange):
         # Drop rows that have a timestamp greater than to_time
         # df = df[df.open_time <= int(to_time.timestamp())]
 
-        # Add symbol column
-        tmp_df['symbol'] = symbol
+        # Add pair column
+        tmp_df['pair'] = pair
 
         # Only keep relevant columns OHLC(V)
-        tmp_df = tmp_df[['symbol', 'open', 'close', 'high', 'low', 'volume']]
+        tmp_df = tmp_df[['pair', 'open', 'close', 'high', 'low', 'volume']]
 
         # Set proper data types
         tmp_df['open'] = tmp_df['open'].astype(float)
@@ -101,8 +103,8 @@ class Binance(IExchange):
 
         # Write to file
         if write_to_file:
-            self.save(symbol, from_time, to_time, interval, tmp_df, prior=include_prior,
-                      include_time=True if interval == '1' else False, verbose=False)
+            self.save_candle_data(pair, from_time, to_time, interval, tmp_df, prior=include_prior,
+                                  include_time=True if interval == '1' else False, verbose=False)
         return tmp_df
 
 # Testing Class
