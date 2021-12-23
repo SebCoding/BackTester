@@ -493,8 +493,8 @@ class EarlyMACD(IStrategy):
                 'Win Idx': max_win_loose_index,
                 'Wins $': total_wins,
                 'Losses $': total_losses,
-                'Fees $': total_fees_paid,
-                'Total P/L': total_wins + total_losses - total_fees_paid
+                'Fees $': round(total_fees_paid, 2),
+                'Total P/L': round(total_wins + total_losses - total_fees_paid, 2)
             },
             ignore_index=True,
         )
