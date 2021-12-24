@@ -4,12 +4,14 @@ import warnings
 
 import pandas as pd
 
+import utils
 from exchanges import ByBit
 import config
 from exchanges.Binance import Binance
 from exchanges.ByBit import ByBit
 from strategies.MACD import MACD
 from strategies.EarlyMACD import EarlyMACD
+from strategies.Scalping1 import Scalping1
 from params import validate_params, load_test_cases_from_file
 
 # Ignore warnings when reading xlsx file containing list of values for dropdown
@@ -18,8 +20,8 @@ warnings.filterwarnings('ignore')
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
-    print(
-        f'---------------------------------------- TEST #{params["Test_Num"]} ----------------------------------------')
+    # print(f'---------------------------------------- TEST #{params["Test_Num"]} ----------------------------------------')
+    print(f'=========================================== TEST #{params["Test_Num"]} ===========================================')
     execution_start = time.time()
     validate_params(params)
 
@@ -27,19 +29,21 @@ def backtest(params):
     df = exchange.get_candle_data(params['Test_Num'], params['Pair'],
                                   params['From_Time'], params['To_Time'], params['Interval'],
                                   include_prior=200, write_to_file=True, verbose=True)
+
+    min_data_size_required = globals()[params['Strategy']].MIN_DATA_SIZE
     if df is None:
         print(f'\nNo data was returned from {exchange.NAME}. Unable to backtest strategy.')
         raise Exception(f"No data returned by {exchange.NAME}")
-    elif len(df) <= config.MIN_DATA_SIZE:
-        print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={config.MIN_DATA_SIZE}. Unable to backtest strategy.')
+    elif len(df) <= min_data_size_required:
+        print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={min_data_size_required}. Unable to backtest strategy.')
         raise Exception("Unable to Run Strategy on Data Set")
 
     strategy = globals()[params['Strategy']](exchange, params, df)
     strategy.add_indicators_and_signals()
     strategy.process_trades()
 
-    exec_time = time.time() - execution_start
-    print(f'Test #{params["Test_Num"]} Execution Time: {exec_time:.1f}s\n')
+    exec_time = utils.format_execution_time(time.time() - execution_start)
+    print(f'Test #{params["Test_Num"]} Execution Time: {exec_time}\n')
 
 
 def main():
@@ -51,14 +55,14 @@ def main():
     statistics_df = pd.DataFrame(
         columns=['Test #', 'Exchange', 'Pair', 'From', 'To', 'Interval', 'Init Capital', 'TP %', 'SL %', 'Maker Fee %',
                  'Taker Fee %',
-                 'Strategy', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
+                 'Strategy', 'Wins', 'Losses', 'Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
                  'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
     # print(results_df.to_string())
 
     # Run back test each test case
     for index, row in test_cases_df.iterrows():
         params = {
-            'Test_Num': index
+            'Test_Num': int(index)
             , 'Exchange': row.Exchange
             , 'Pair': row.Pair
             , 'From_Time': row.From

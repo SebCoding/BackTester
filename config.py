@@ -5,7 +5,6 @@ TEST_CASES_FILE_PATH = 'TestCases.xlsx'  # File containing test cases
 HISTORICAL_FILES_PATH = 'exchange_data'  # Folder location where to store the exchange's original raw data
 RESULTS_PATH = 'output_files'  # Folder location where to store the back testing output
 OUTPUT_FILE_FORMAT = ['csv']  # Preferred format(s) for the output: csv, xlsx or both. Ex: ['csv', 'xlsx']
-MIN_DATA_SIZE = 200  # Cannot run Strategy on data set less than this value
 
 # Supported File Formats
 SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
@@ -17,5 +16,5 @@ SUPPORTED_EXCHANGES = ['Binance', 'ByBit']
 VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w']
 
 # Implemented Strategies
-IMPLEMENTED_STRATEGIES = ['MACD', 'EarlyMACD']
+IMPLEMENTED_STRATEGIES = ['MACD', 'EarlyMACD', 'Scalping1']
 

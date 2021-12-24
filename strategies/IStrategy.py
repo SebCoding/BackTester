@@ -12,7 +12,10 @@ class IStrategy(ABC):
     # Used to output on console a dot for each trade processed.
     # Used as limited output progress bar
     USE_DOT_PROGRESS_OUTPUT = True
-    PROGRESS_COUNTER_MAX = 100
+    PROGRESS_COUNTER_MAX = 90
+
+    # Cannot run Strategy on data set less than this value
+    MIN_DATA_SIZE = 0
 
     def __init__(self, exchange, params, df):
         self.exchange = exchange

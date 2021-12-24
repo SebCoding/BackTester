@@ -20,6 +20,9 @@ class EarlyMACD(IStrategy):
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 1.0
 
+    # Cannot run Strategy on data set less than this value
+    MIN_DATA_SIZE = 200
+
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
         self.TP_PCT = self.params['Take_Profit_PCT'] / 100
@@ -84,8 +87,8 @@ class EarlyMACD(IStrategy):
         self.df['volume'] = self.df['volume'].astype(float)
 
         # Keep only this list of columns, delete all other columns
-        final_table_columns = ['pair', 'interval', 'open', 'high', 'low', 'close']
-        self.df = self.df[self.df.columns.intersection(final_table_columns)]
+        # final_table_columns = ['pair', 'interval', 'open', 'high', 'low', 'close']
+        # self.df = self.df[self.df.columns.intersection(final_table_columns)]
 
         # MACD - Moving Average Convergence/Divergence
         macd, macdsignal, macdhist = talib.MACD(self.df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
@@ -499,6 +502,9 @@ class EarlyMACD(IStrategy):
             # Update account_balance running balance
             self.df.iloc[i, account_balance_col_index] = account_balance
 
+            if account_balance < 0:
+                print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
+
         # Round all values to 2 decimals
         self.df = self.df.round(decimals=2)
 
@@ -516,18 +522,6 @@ class EarlyMACD(IStrategy):
                                   self.params['To_Time'], self.params['Interval'], self.df, False, True)
 
         max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(self.df)
-
-        # print_trade_stats(
-        #     total_wins,
-        #     total_losses,
-        #     nb_wins,
-        #     nb_losses,
-        #     total_fees_paid,
-        #     max_conseq_wins,
-        #     max_conseq_losses,
-        #     min_win_loose_index,
-        #     max_win_loose_index
-        # )
 
         # Store results in Results DataFrame
         total_trades = nb_wins + nb_losses
@@ -549,7 +543,7 @@ class EarlyMACD(IStrategy):
 
                 'Wins': nb_wins,
                 'Losses': nb_losses,
-                'Total Trades': total_trades,
+                'Trades': total_trades,
                 'Success Rate': f'{success_rate:.1f}%',
                 'Loss Idx': min_win_loose_index,
                 'Win Idx': max_win_loose_index,

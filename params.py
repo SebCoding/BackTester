@@ -68,6 +68,7 @@ def validate_params(params):
 def load_test_cases_from_file(filename):
     print(f'Loading test cases from file => [{filename}]')
     df = read_excel_to_dataframe(filename)
+    df.dropna(inplace=True)
 
     # Adjust column types
     df['Interval'] = df['Interval'].astype(str)

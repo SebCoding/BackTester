@@ -7,54 +7,68 @@ import utils
 from enums.TradeStatus import TradeStatuses
 from strategies.IStrategy import IStrategy
 
-class MACD(IStrategy):
 
-    NAME = 'MACD'
+class Scalping1(IStrategy):
+    NAME = 'Scalping1'
 
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 1.0
 
     # Cannot run Strategy on data set less than this value
-    MIN_DATA_SIZE = 200
+    MIN_DATA_SIZE = 50
 
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
         self.TP_PCT = self.params['Take_Profit_PCT'] / 100
         self.SL_PCT = self.params['Stop_Loss_PCT'] / 100
 
-    # ----------------------------------------------------------------------
-    # Function used determine trade entries (long/short)
-    # ----------------------------------------------------------------------
-    # def trade_entries(self, trend, macdsignal, cross):
-    #     if trend == 'Up' and macdsignal < 0 and cross == -1:
-    #         return "Enter Long"
-    #     elif trend == 'Down' and macdsignal > 0 and cross == 1:
-    #         return "Enter Short"
-    #     return None
-
     def mark_entries(self):
         # Mark long entries
         self.df.loc[
             (
-                    (self.df['close'] > self.df['ema200']) &  # price > ema200
-                    (self.df['macdsignal'] < 0) &  # macdsignal < 0
-                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
+                    (self.df['close'] > self.df['EMA50']) &  # price > EMA-50
+                    (self.df['RSI3'] < 20) &  # RSI < 20
+                    (self.df['ADX5'] > 30)  # ADX > 30
             ),
-            'trade_status'] = TradeStatuses.EnterLong
+            'signal'] = 1
 
         # Mark short entries
         # trend == 'Down' and macdsignal > 0 and cross == 1:
         self.df.loc[
             (
-                    (self.df['close'] < self.df['ema200']) &  # price < ema200
-                    (self.df['macdsignal'] > 0) &  # macdsignal > 0
-                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
+                    (self.df['close'] < self.df['EMA50']) &  # price < EMA-50
+                    (self.df['RSI3'] > 80) &  # RSI > 80
+                    (self.df['ADX5'] > 30)  # ADX > 30
             ),
-            'trade_status'] = TradeStatuses.EnterShort
+            'signal'] = -1
 
-        # We enter the trade on the next candle after the signal candle has completed
-        self.df['trade_status'] = self.df['trade_status'].shift(1)
+    # When we get a 'Enter Long' signal we only enter the trade when the RSI exists the oversold area
+    # When we get a 'Enter Short' signal we only enter the trade when the RSI exists the overbought area
+    def adjust_entry_points(self):
+
+        self.df['trade_status'] = None
+        received_long_signal = False
+        received_short_signal = False
+        trade_status_col_index = self.df.columns.get_loc("trade_status")
+        rsi3_col_index = self.df.columns.get_loc("RSI3")
+
+        for i, row in enumerate(self.df.itertuples(index=True), 0):
+            # if we receive another signal while we are not done processing the prior one,
+            # we ignore the new ones until the old one is processed
+            if row.signal == 1 and not received_long_signal and not received_short_signal:
+                received_long_signal = True
+            elif row.signal == -1 and not received_long_signal and not received_short_signal:
+                received_short_signal = True
+
+            # RSI exiting oversold area
+            if received_long_signal and self.df.iloc[i, rsi3_col_index] > 20:
+                self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
+                received_long_signal = False
+            # RSI exiting overbought area
+            elif received_short_signal and self.df.iloc[i, rsi3_col_index] < 80:
+                self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
+                received_short_signal = False
 
     # Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
@@ -67,30 +81,25 @@ class MACD(IStrategy):
         self.df['close'] = self.df['close'].astype(float)
         self.df['volume'] = self.df['volume'].astype(float)
 
-        # Keep only this list of columns, delete all other columns
-        # final_table_columns = ['pair', 'interval', 'open', 'high', 'low', 'close']
-        # self.df = self.df[self.df.columns.intersection(final_table_columns)]
+        # Trend Indicator. EMA-50
+        self.df['EMA50'] = talib.EMA(self.df['close'], timeperiod=50)
 
-        # MACD - Moving Average Convergence/Divergence
-        macd, macdsignal, macdhist = talib.MACD(self.df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        self.df['macd'] = macd
-        self.df['macdsignal'] = macdsignal
+        # Momentum Indicator. RSI-3
+        self.df['RSI3'] = talib.RSI(self.df['close'], timeperiod=3)
 
-        # EMA - Exponential Moving Average 200
-        self.df['ema200'] = talib.EMA(self.df['close'], timeperiod=200)
+        # Volatility Indicator. ADX-5
+        self.df['ADX5'] = talib.ADX(self.df['high'], self.df['low'], self.df['close'], timeperiod=5)
 
         # Identify the trend
-        self.df.loc[self.df['close'] > self.df['ema200'], 'trend'] = 'Up'
-        self.df.loc[self.df['close'] < self.df['ema200'], 'trend'] = 'Down'
-
-        # macdsignal over macd then 1, under 0
-        self.df['O/U'] = np.where(self.df['macdsignal'] >= self.df['macd'], 1, 0)
-
-        # macdsignal crosses macd
-        self.df['cross'] = self.df['O/U'].diff()
+        # self.df.loc[self.df['close'] > self.df['EMA-50'], 'trend'] = 'Up'
+        # self.df.loc[self.df['close'] < self.df['EMA-50'], 'trend'] = 'Down'
 
         # Mark long/short entries
         self.mark_entries()
+
+        # When we get a 'Enter Long' signal we only enter the trade when the RSI exists the oversold area
+        # When we get a 'Enter Short' signal we only enter the trade when the RSI exists the overbought area
+        self.adjust_entry_points()
 
         # Add and Initialize new columns
         self.df['wallet'] = 0.0
@@ -361,10 +370,12 @@ class MACD(IStrategy):
                 print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
         # Round all values to 2 decimals
+        self.df['take_profit'] = self.df['take_profit'].astype(float).round(2)
+        self.df['stop_loss'] = self.df['stop_loss'].astype(float).round(2)
         self.df = self.df.round(decimals=2)
 
-        # Remove rows with nulls entries for macd, macdsignal or ema200
-        self.df = self.df.dropna(subset=['ema200'])
+        # Remove rows with nulls entries for EMA50
+        self.df = self.df.dropna(subset=['EMA50'])
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
