@@ -5,6 +5,7 @@ import api_keys
 import utils
 from exchanges.IExchange import IExchange
 from binance.client import Client
+from binance.enums import HistoricalKlinesType
 
 
 # Using: python-binance
@@ -29,6 +30,7 @@ class Binance(IExchange):
         "2h": Client.KLINE_INTERVAL_2HOUR,
         "4h": Client.KLINE_INTERVAL_4HOUR,
         "6h": Client.KLINE_INTERVAL_6HOUR,
+        "8h": Client.KLINE_INTERVAL_8HOUR,
         "12h": Client.KLINE_INTERVAL_12HOUR,
         "D": Client.KLINE_INTERVAL_1DAY,
         "W": Client.KLINE_INTERVAL_1WEEK
@@ -70,7 +72,7 @@ class Binance(IExchange):
         to_time_stamp = to_time.timestamp() * 1000
 
         result = self.client.get_historical_klines(pair, self.interval_map[interval], int(start_datetime_stamp),
-                                                   int(to_time_stamp), limit=1000)
+                                                   int(to_time_stamp), limit=1000, klines_type=HistoricalKlinesType.FUTURES)
 
         # delete unwanted data - just keep date, open, high, low, close, volume
         for line in result:
