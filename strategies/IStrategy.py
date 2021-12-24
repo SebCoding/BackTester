@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import math
 
 # Base Abstract Strategy Class
 class IStrategy(ABC):
@@ -46,8 +47,12 @@ class IStrategy(ABC):
     def get_stop_loss_fee(self, trade_amount):
         return float(trade_amount) * self.TAKER_FEE_PCT
 
-    def get_stake_amount(self, amount):
-        return amount * self.TRADABLE_BALANCE_RATIO
+    def get_stake_and_entry_fee(self, amount):
+        staked_amount = amount * self.TRADABLE_BALANCE_RATIO
+        entry_fee = self.get_entry_fee(staked_amount)
+        if self.MAKER_FEE_PCT > 0:
+            staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
+        return staked_amount, entry_fee
 
     # Call this method each time a is processed to update progress on console
     def update_progress_dots(self):

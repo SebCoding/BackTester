@@ -147,6 +147,7 @@ def read_csv_to_dataframe_by_range(filename, from_time, to_time):
     dask_df = dd.read_csv(filename, parse_dates=['Unnamed: 0']).set_index('Unnamed: 0')
     dask_df = dask_df.loc[from_time:to_time]
     df = dask_df.compute()
+    df.dropna(inplace=True)
     df.index.name = None
     # print(f'from:{from_time} to:{to_time}')
     # print(df.to_string())

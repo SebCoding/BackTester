@@ -39,30 +39,34 @@ class Binance(IExchange):
         self.client = Client(api_keys.BINANCE_API_KEY, api_keys.BINANCE_API_SECRET_KEY)
 
     def get_maker_fee(self, pair):
-        return 0.0002
+        return 0.0002 * 0.9  # 10% rebate for paying fees in BNB
 
     def get_taker_fee(self, pair):
-        return 0.0004
+        return 0.0004 * 0.9  # 10% rebate for paying fees in BNB
 
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     # Note: Binance uses 13 digit timestamps as opposed to 10 in our code.
     #       We need to multiply and divide by 1000 to adjust for it
-    def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True, verbose=False):
+    def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
+                        verbose=False):
         self.validate_interval(interval)
 
         # Use locally saved data if it exists
         include_time = False if interval != "1" else True
-        cached_df = self.get_cached_exchange_data(pair, from_time, to_time, interval, prior=include_prior, include_time=include_time)
+        cached_df = self.get_cached_exchange_data(pair, from_time, to_time, interval, prior=include_prior,
+                                                  include_time=include_time)
 
         from_time_str = from_time.strftime('%Y-%m-%d')
         to_time_str = to_time.strftime('%Y-%m-%d')
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {pair} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+                print(
+                    f'Using locally cached data for {pair} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
         if verbose:
-            print(f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+            print(
+                f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
 
         start_time = from_time
 
@@ -74,7 +78,8 @@ class Binance(IExchange):
         to_time_stamp = to_time.timestamp() * 1000
 
         result = self.client.get_historical_klines(pair, self.interval_map[interval], int(start_datetime_stamp),
-                                                   int(to_time_stamp), limit=1000, klines_type=HistoricalKlinesType.FUTURES)
+                                                   int(to_time_stamp), limit=1000,
+                                                   klines_type=HistoricalKlinesType.FUTURES)
 
         # delete unwanted data - just keep date, open, high, low, close, volume
         for line in result:

@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import talib
 
@@ -152,13 +151,11 @@ class Scalping1(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
-                staked_amount = self.get_stake_amount(account_balance)
-                entry_fee = self.get_entry_fee(staked_amount)
+                staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
                 # Update staked and account_balance
-                account_balance -= staked_amount
-                staked_amount -= entry_fee
+                account_balance -= (staked_amount + entry_fee)
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.low <= stop_loss:
@@ -257,13 +254,11 @@ class Scalping1(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
-                staked_amount = self.get_stake_amount(account_balance)
-                entry_fee = self.get_entry_fee(staked_amount)
+                staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
                 # Update staked and account_balance
-                account_balance -= staked_amount
-                staked_amount -= entry_fee
+                account_balance -= (staked_amount + entry_fee)
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.high >= stop_loss:
@@ -386,7 +381,7 @@ class Scalping1(IStrategy):
                 'From': self.params['From_Time'].strftime("%Y-%m-%d"),
                 'To': self.params['To_Time'].strftime("%Y-%m-%d"),
                 'Interval': self.params['Interval'],
-                'Init Capital': self.params['Initial_Capital'],
+                'Init Capital': f'{self.params["Initial_Capital"]:,.2f}',
                 'TP %': self.params['Take_Profit_PCT'],
                 'SL %': self.params['Stop_Loss_PCT'],
                 'Maker Fee %': self.MAKER_FEE_PCT * 100,
@@ -399,10 +394,10 @@ class Scalping1(IStrategy):
                 'Success Rate': f'{success_rate:.1f}%',
                 'Loss Idx': min_win_loose_index,
                 'Win Idx': max_win_loose_index,
-                'Wins $': round(total_wins, 2),
-                'Losses $': round(total_losses, 2),
-                'Fees $': round(total_fees_paid, 2),
-                'Total P/L': round(total_wins + total_losses - total_fees_paid, 2)
+                'Wins $': f'{total_wins:,.2f}',
+                'Losses $': f'{total_losses:,.2f}',
+                'Fees $': f'{total_fees_paid:,.2f}',
+                'Total P/L': f'{(total_wins + total_losses - total_fees_paid):,.2f}'
             },
             ignore_index=True,
         )
