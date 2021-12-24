@@ -15,6 +15,7 @@ class Binance(IExchange):
     NAME = 'Binance'
 
     # Modify maker/taker fees here for the ByBit exchange
+    # Make sure these values are floats, use decimal notation with a dot
     MAKER_FEE_PCT = 0.02
     TAKER_FEE_PCT = 0.04
 

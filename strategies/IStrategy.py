@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 
-# Abstract Exchange Class
+# Base Abstract Strategy Class
 class IStrategy(ABC):
 
     NAME = 'abstract'
 
-    # Percentage of the wallet that will be used for each trade
-    # Amount must be between 0 and 1.
-    STAKE_AMOUNT_PCT = 0.0
+    # Ratio of the total account balance the bot is allowed to trade.
+    # Positive float between 0.0 and 1.0
+    TRADABLE_BALANCE_RATIO = 0.0
 
     # Used to output on console a dot for each trade processed.
     # Used as limited output progress bar

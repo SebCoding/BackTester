@@ -12,6 +12,7 @@ class ByBit(IExchange):
     NAME = 'ByBit'
 
     # Modify maker/taker fees here for the ByBit exchange
+    # Make sure these values are floats, use decimal notation with a dot
     MAKER_FEE_PCT = -0.025
     TAKER_FEE_PCT = 0.075
 
