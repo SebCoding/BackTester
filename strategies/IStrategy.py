@@ -5,10 +5,14 @@ class IStrategy(ABC):
 
     NAME = 'abstract'
 
+    # Percentage of the wallet that will be used for each trade
+    # Amount must be between 0 and 1.
+    STAKE_AMOUNT_PCT = 0.0
+
     # Used to output on console a dot for each trade processed.
     # Used as limited output progress bar
-    PROGRESS_COUNTER_MAX = 100
     USE_DOT_PROGRESS_OUTPUT = True
+    PROGRESS_COUNTER_MAX = 100
 
     def __init__(self, exchange, params, df):
         self.exchange = exchange

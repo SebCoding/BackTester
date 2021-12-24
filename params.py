@@ -18,7 +18,7 @@ def print_parameters(params, all=False):
         print(f'FROM_TIME: {params["From_Time"]}')
         print(f'TO_TIME: {params["To_Time"]}')
         print(f'INTERVAL: {params["Interval"]}')
-        print(f'TRADE_AMOUNT: {params["Trade_Amount"]}')
+        print(f'INITIAL_AMOUNT: {params["Initial_Capital"]}')
         print(f'TAKE_PROFIT_PCT: {params["Take_Profit_PCT"]}%')
         print(f'STOP_LOSS_PCT: {params["Stop_Loss_PCT"]}%')
         print('-------------------------------------------------------')
@@ -40,9 +40,9 @@ def validate_params(params):
     if params["Interval"] not in config.VALID_INTERVALS:
         raise Exception(f'Invalid Parameter: Interval = [{params["Interval"]}].')
 
-    trade_amount = params["Trade_Amount"]
-    if not isinstance(trade_amount, float) or trade_amount <= 0:
-        raise Exception(f'Invalid Parameter: Trade_Amount = [{trade_amount}]. Must be a positive value of type float.')
+    initial_capital = params["Initial_Capital"]
+    if not isinstance(initial_capital, float) or initial_capital <= 0:
+        raise Exception(f'Invalid Parameter: Initial_Capital = [{initial_capital}]. Must be a positive value of type float.')
 
     take_profit_pct = params["Take_Profit_PCT"]
     if not isinstance(take_profit_pct, float) or take_profit_pct <= 0:
@@ -71,7 +71,7 @@ def load_test_cases_from_file(filename):
 
     # Adjust column types
     df['Interval'] = df['Interval'].astype(str)
-    df['Trade Amount'] = df['Trade Amount'].astype(float)
+    df['Initial Capital'] = df['Initial Capital'].astype(float)
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
     return df

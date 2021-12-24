@@ -49,7 +49,7 @@ def main():
 
     # Create DataFrame to store results
     statistics_df = pd.DataFrame(
-        columns=['Test #', 'Exchange', 'Pair', 'From', 'To', 'Interval', 'Amount', 'TP %', 'SL %', 'Maker Fee %',
+        columns=['Test #', 'Exchange', 'Pair', 'From', 'To', 'Interval', 'Init Capital', 'TP %', 'SL %', 'Maker Fee %',
                  'Taker Fee %',
                  'Strategy', 'Wins', 'Losses', 'Total Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
                  'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
@@ -64,7 +64,7 @@ def main():
             , 'From_Time': row.From
             , 'To_Time': row.To
             , 'Interval': row.Interval
-            , 'Trade_Amount': row['Trade Amount']
+            , 'Initial_Capital': row['Initial Capital']
             , 'Take_Profit_PCT': row['TP %']
             , 'Stop_Loss_PCT': row['SL %']
             , 'Strategy': row['Strategy']
@@ -75,7 +75,7 @@ def main():
         statistics_df = params['Statistics']
 
     # Save results to file
-    now = datetime.now().strftime('%Y-%m-%d (%H.%M.%S)')
+    now = datetime.now().strftime('[%Y-%m-%d] [%H.%M.%S]')
     statistics_df = statistics_df.set_index('Test #')
     if 'csv' in config.OUTPUT_FILE_FORMAT:
         filename = config.RESULTS_PATH + '\\' + f'Statistics - {now}.csv'

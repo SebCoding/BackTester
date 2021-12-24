@@ -14,7 +14,9 @@ import utils
 
 
 class MACD(IStrategy):
+
     NAME = 'MACD'
+    STAKE_AMOUNT_PCT = 1.0
 
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
@@ -104,8 +106,8 @@ class MACD(IStrategy):
 
     # Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
-        # entry_time = None
-        # entry_price = 0.0
+
+        wallet = self.params['Initial_Capital']
         stop_loss = 0.0
         take_profit = 0.0
         trade_status = ''
@@ -147,33 +149,33 @@ class MACD(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
-                entry_fee = self.params['Trade_Amount'] * MAKER_FEE_PCT
+                entry_fee = self.params['Initial_Capital'] * MAKER_FEE_PCT
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.low <= stop_loss:
-                    loss = self.params['Trade_Amount'] * SL_PCT * -1
+                    loss = self.params['Initial_Capital'] * SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
                     self.df.iloc[i, losses_col_index] = loss
                     total_losses += loss
                     trade_status = ''
                     nb_losses += 1
                     # Exit Fee 'loss'
-                    exit_fee = (self.params['Trade_Amount'] - loss) * TAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] - loss) * TAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
 
                 # We exit in the same candle we entered, take profit
                 elif row.high >= take_profit:
-                    win = self.params['Trade_Amount'] * TP_PCT
+                    win = self.params['Initial_Capital'] * TP_PCT
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
                     self.df.iloc[i, wins_col_index] = win
                     total_wins += win
                     trade_status = ''
                     nb_wins += 1
                     # Exit Fee 'win'
-                    exit_fee = (self.params['Trade_Amount'] + win) * MAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] + win) * MAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
 
@@ -183,7 +185,7 @@ class MACD(IStrategy):
 
             elif trade_status in [TradeStatuses.Long] and pd.isnull(row.trade_status):
                 if row.low <= stop_loss:
-                    loss = self.params['Trade_Amount'] * SL_PCT * -1
+                    loss = self.params['Initial_Capital'] * SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitLong
                     self.df.iloc[i, losses_col_index] = loss
                     self.df.iloc[i, tp_col_index] = take_profit
@@ -194,11 +196,11 @@ class MACD(IStrategy):
                     trade_status = ''
                     nb_losses += 1
                     # Exit Fee 'loss'
-                    exit_fee = (self.params['Trade_Amount'] - loss) * TAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] - loss) * TAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 elif row.high >= take_profit:
-                    win = self.params['Trade_Amount'] * TP_PCT
+                    win = self.params['Initial_Capital'] * TP_PCT
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitLong
                     self.df.iloc[i, wins_col_index] = win
                     self.df.iloc[i, tp_col_index] = take_profit
@@ -209,7 +211,7 @@ class MACD(IStrategy):
                     trade_status = ''
                     nb_wins += 1
                     # Exit Fee 'win'
-                    exit_fee = (self.params['Trade_Amount'] + win) * MAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] + win) * MAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 else:
@@ -241,32 +243,32 @@ class MACD(IStrategy):
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
-                entry_fee = self.params['Trade_Amount'] * MAKER_FEE_PCT
+                entry_fee = self.params['Initial_Capital'] * MAKER_FEE_PCT
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.high >= stop_loss:
-                    loss = SL_PCT * self.params['Trade_Amount'] * -1
+                    loss = SL_PCT * self.params['Initial_Capital'] * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
                     self.df.iloc[i, losses_col_index] = loss
                     total_losses += loss
                     trade_status = ''
                     nb_losses += 1
                     # Exit Fee 'loss'
-                    exit_fee = (self.params['Trade_Amount'] + loss) * TAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] + loss) * TAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 # We exit in the same candle we entered, hit take profit
                 elif row.low <= take_profit:
-                    win = self.params['Trade_Amount'] * TP_PCT
+                    win = self.params['Initial_Capital'] * TP_PCT
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
                     self.df.iloc[i, wins_col_index] = win
                     total_wins += win
                     trade_status = ''
                     nb_wins += 1
                     # Exit Fee 'loss'
-                    exit_fee = (self.params['Trade_Amount'] - win) * MAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] - win) * MAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 # We just entered TradeStatuses.EnterShort in this candle, so set the status to TradeStatuses.Short
@@ -275,7 +277,7 @@ class MACD(IStrategy):
 
             elif trade_status in [TradeStatuses.Short] and pd.isnull(row.trade_status):
                 if row.high >= stop_loss:
-                    loss = SL_PCT * self.params['Trade_Amount'] * -1
+                    loss = SL_PCT * self.params['Initial_Capital'] * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitShort
                     self.df.iloc[i, losses_col_index] = loss
                     self.df.iloc[i, tp_col_index] = take_profit
@@ -286,11 +288,11 @@ class MACD(IStrategy):
                     trade_status = ''
                     nb_losses += 1
                     # Exit Fee 'loss'
-                    exit_fee = (self.params['Trade_Amount'] + loss) * TAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] + loss) * TAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 elif row.low <= take_profit:
-                    win = self.params['Trade_Amount'] * TP_PCT
+                    win = self.params['Initial_Capital'] * TP_PCT
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitShort
                     self.df.iloc[i, wins_col_index] = win
                     self.df.iloc[i, tp_col_index] = take_profit
@@ -301,7 +303,7 @@ class MACD(IStrategy):
                     trade_status = ''
                     nb_wins += 1
                     # Exit Fee 'win'
-                    exit_fee = (self.params['Trade_Amount'] - win) * MAKER_FEE_PCT
+                    exit_fee = (self.params['Initial_Capital'] - win) * MAKER_FEE_PCT
                     self.df.iloc[i, fee_col_index] += exit_fee
                     total_fees_paid += exit_fee
                 else:
@@ -324,6 +326,9 @@ class MACD(IStrategy):
 
         # Remove rows with nulls entries for macd, macdsignal or ema200
         self.df = self.df.dropna(subset=['ema200'])
+
+        # Remove underscores from column names
+        self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
 
         print() # Jump to next line
 
@@ -357,7 +362,7 @@ class MACD(IStrategy):
                 'From': self.params['From_Time'].strftime("%Y-%m-%d"),
                 'To': self.params['To_Time'].strftime("%Y-%m-%d"),
                 'Interval': self.params['Interval'],
-                'Amount': self.params['Trade_Amount'],
+                'Init Capital': self.params['Initial_Capital'],
                 'TP %': self.params['Take_Profit_PCT'],
                 'SL %': self.params['Stop_Loss_PCT'],
                 'Maker Fee %': self.exchange.MAKER_FEE_PCT,
