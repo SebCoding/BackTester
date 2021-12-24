@@ -25,12 +25,12 @@ def backtest(params):
     execution_start = time.time()
     validate_params(params)
 
+    min_data_size_required = globals()[params['Strategy']].MIN_DATA_SIZE
     exchange = globals()[params['Exchange']]()
     df = exchange.get_candle_data(params['Test_Num'], params['Pair'],
                                   params['From_Time'], params['To_Time'], params['Interval'],
-                                  include_prior=200, write_to_file=True, verbose=True)
+                                  include_prior=min_data_size_required, write_to_file=True, verbose=True)
 
-    min_data_size_required = globals()[params['Strategy']].MIN_DATA_SIZE
     if df is None:
         print(f'\nNo data was returned from {exchange.NAME}. Unable to backtest strategy.')
         raise Exception(f"No data returned by {exchange.NAME}")

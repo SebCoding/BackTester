@@ -39,10 +39,33 @@ class ByBit(IExchange):
         # Unauthenticated
         self.session_unauth = HTTP(endpoint=self.my_api_endpoint)
         # Authenticated
-        self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key, api_secret=self.my_api_secret_key)
+        self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key,
+                                 api_secret=self.my_api_secret_key)
+        # self.load_markets()
+
+    def load_markets(self):
+        print(f'Loading {self.NAME} markets.')
+        markets = self.session_unauth.query_symbol()['result']
+        self.markets_df = pd.DataFrame.from_dict(markets, orient='columns')
+        self.markets_df = self.markets_df[['name', 'alias', 'status', 'base_currency',
+                                           'quote_currency', 'taker_fee', 'maker_fee']]
+        # print(self.markets_df.to_string())
+
+    def get_maker_fee(self, pair):
+        # self.validate_pair(pair)
+        # print(f'maker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "maker_fee"].iat[0]}')
+        # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'maker_fee'].iat[0])
+        return -0.00025
+
+    def get_taker_fee(self, pair):
+        # self.validate_pair(pair)
+        # print(f'taker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "taker_fee"].iat[0]}')
+        # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'taker_fee'].iat[0])
+        return 0.00075
 
     def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
+        self.validate_pair(pair)
         self.validate_interval(interval)
 
         # Use locally saved data if it exists
@@ -52,15 +75,16 @@ class ByBit(IExchange):
         to_time_str = to_time.strftime('%Y-%m-%d')
         if cached_df is not None:
             if verbose:
-                print(f'Using locally cached data for {pair} from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+                print(f'Using locally cached data for {pair} from {self.NAME}.',
+                      f'Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
         # The issue with ByBit API is that you can get a maximum of 200 bars from it.
         # So if you need to get data for a large portion of the time you have to call it multiple times.
 
         if verbose:
-            # print(f'Fetching {pair} data from ByBit. Interval [{interval}], From[{from_time.strftime("%Y-%m-%d")}], To[{to_time.strftime("%Y-%m-%d")}].')
-            print(f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
+            print(
+                f'Fetching {pair} data from {self.NAME}. Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
 
         df_list = []
         start_time = from_time
@@ -73,7 +97,8 @@ class ByBit(IExchange):
         to_time_stamp = to_time.timestamp()
 
         while last_datetime_stamp < to_time_stamp:
-            result = self.session_auth.query_kline(symbol=pair, interval=self.interval_map[interval], **{'from': last_datetime_stamp})['result']
+            result = self.session_auth.query_kline(symbol=pair, interval=self.interval_map[interval],
+                                                   **{'from': last_datetime_stamp})['result']
             tmp_df = pd.DataFrame(result)
 
             if tmp_df is None or (len(tmp_df.index) == 0):
@@ -95,7 +120,7 @@ class ByBit(IExchange):
         df = df[df.open_time <= int(to_time.timestamp())]
 
         # Only keep relevant columns OHLC(V)
-        df.rename(columns = {'symbol':'pair'}, inplace = True)
+        df.rename(columns={'symbol': 'pair'}, inplace=True)
         df = df[['pair', 'open', 'high', 'low', 'close', 'volume']]
 
         # Set proper data types

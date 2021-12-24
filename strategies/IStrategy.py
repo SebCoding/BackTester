@@ -22,6 +22,10 @@ class IStrategy(ABC):
         self.params = params
         self.df = df
         self.progress_counter = 0
+        self.TP_PCT = self.params['Take_Profit_PCT'] / 100
+        self.SL_PCT = self.params['Stop_Loss_PCT'] / 100
+        self.MAKER_FEE_PCT = self.exchange.get_maker_fee(params['Pair'])
+        self.TAKER_FEE_PCT = self.exchange.get_taker_fee(params['Pair'])
 
     # Calculate indicator values required to determine long/short signals
     @abstractmethod
@@ -33,6 +37,17 @@ class IStrategy(ABC):
     def process_trades(self):
         pass
 
+    def get_entry_fee(self, trade_amount):
+        return float(trade_amount) * self.MAKER_FEE_PCT
+
+    def get_take_profit_fee(self, trade_amount):
+        return float(trade_amount) * self.MAKER_FEE_PCT
+
+    def get_stop_loss_fee(self, trade_amount):
+        return float(trade_amount) * self.TAKER_FEE_PCT
+
+    def get_stake_amount(self, amount):
+        return amount * self.TRADABLE_BALANCE_RATIO
 
     # Call this method each time a is processed to update progress on console
     def update_progress_dots(self):

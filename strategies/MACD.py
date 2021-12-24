@@ -20,8 +20,6 @@ class MACD(IStrategy):
 
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
-        self.TP_PCT = self.params['Take_Profit_PCT'] / 100
-        self.SL_PCT = self.params['Stop_Loss_PCT'] / 100
 
     # ----------------------------------------------------------------------
     # Function used determine trade entries (long/short)
@@ -101,18 +99,6 @@ class MACD(IStrategy):
         self.df['fee'] = 0.0
 
         return self.df
-
-    def get_entry_fee(self, trade_amount):
-        return float(trade_amount) * self.exchange.MAKER_FEE_PCT / 100
-
-    def get_take_profit_fee(self, trade_amount):
-        return float(trade_amount) * self.exchange.MAKER_FEE_PCT / 100
-
-    def get_stop_loss_fee(self, trade_amount):
-        return float(trade_amount) * self.exchange.TAKER_FEE_PCT / 100
-
-    def get_stake_amount(self, amount):
-        return amount * self.TRADABLE_BALANCE_RATIO
 
     # Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
@@ -392,8 +378,8 @@ class MACD(IStrategy):
                 'Init Capital': self.params['Initial_Capital'],
                 'TP %': self.params['Take_Profit_PCT'],
                 'SL %': self.params['Stop_Loss_PCT'],
-                'Maker Fee %': self.exchange.MAKER_FEE_PCT,
-                'Taker Fee %': self.exchange.TAKER_FEE_PCT,
+                'Maker Fee %': self.MAKER_FEE_PCT * 100,
+                'Taker Fee %': self.TAKER_FEE_PCT * 100,
                 'Strategy': self.params['Strategy'],
 
                 'Wins': nb_wins,

@@ -14,11 +14,6 @@ from binance.enums import HistoricalKlinesType
 class Binance(IExchange):
     NAME = 'Binance'
 
-    # Modify maker/taker fees here for the ByBit exchange
-    # Make sure these values are floats, use decimal notation with a dot
-    MAKER_FEE_PCT = 0.02
-    TAKER_FEE_PCT = 0.04
-
     # Dictionary of pairs used by exchange to define intervals for candle data
     # Binance valid intervals - 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M
     interval_map = {
@@ -42,6 +37,12 @@ class Binance(IExchange):
         self.my_api_key = api_keys.BINANCE_API_KEY
         self.my_api_secret = api_keys.BINANCE_API_SECRET_KEY
         self.client = Client(api_keys.BINANCE_API_KEY, api_keys.BINANCE_API_SECRET_KEY)
+
+    def get_maker_fee(self, pair):
+        return 0.0002
+
+    def get_taker_fee(self, pair):
+        return 0.0004
 
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     # Note: Binance uses 13 digit timestamps as opposed to 10 in our code.

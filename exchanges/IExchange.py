@@ -8,16 +8,14 @@ import utils
 
 class IExchange(ABC):
 
-
     NAME = 'abstract'
-    MAKER_FEE_PCT = 0.0
-    TAKER_FEE_PCT = 0.0
 
     # Dictionary of pairs used by exchange to define intervals for candle data
     interval_map = None
 
     def __init__(self):
         super().__init__()
+        self.markets_df = None
 
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     @abstractmethod
@@ -77,6 +75,22 @@ class IExchange(ABC):
         valid_intervals_str = valid_intervals_str.join(valid_intervals)
         if interval not in valid_intervals:
             raise Exception(f'\nInvalid Interval [{interval}]. Expected values: {valid_intervals_str}')
+
+    def validate_pair(self, pair):
+        # valid_pairs = self.markets_df['name'].tolist()
+        # valid_pairs_str = ' '
+        # valid_pairs_str = valid_pairs_str.join(valid_pairs)
+        # if pair not in valid_pairs:
+        #     raise Exception(f'Invalid pair [{pair}]. Expected list of values: {valid_pairs_str}')
+        pass
+
+    @abstractmethod
+    def get_maker_fee(self, pair):
+        pass
+
+    @abstractmethod
+    def get_taker_fee(self, pair):
+        pass
 
 
 
