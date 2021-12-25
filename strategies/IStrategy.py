@@ -53,7 +53,10 @@ class IStrategy(ABC):
         staked_amount = amount * self.TRADABLE_BALANCE_RATIO
         entry_fee = self.get_entry_fee(staked_amount)
         if self.MAKER_FEE_PCT > 0:
-            staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
+            # old = staked_amount
+            # staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
+            # print(f'staked_amount: {staked_amount}  -  {old - entry_fee}')
+            staked_amount = staked_amount - entry_fee
         return staked_amount, entry_fee
 
     # Call this method each time a processed to update progress on console
@@ -117,7 +120,11 @@ class IStrategy(ABC):
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
                 # Update staked and account_balance
-                account_balance -= (staked_amount + entry_fee)
+                if entry_fee < 0: # Negative fee = credit/refund
+                    # remove staked amount from balance and add fee credit/refund
+                    account_balance = account_balance - staked_amount - entry_fee
+                else:
+                    account_balance -= (staked_amount + entry_fee)
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.low <= stop_loss:
@@ -220,7 +227,11 @@ class IStrategy(ABC):
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
                 # Update staked and account_balance
-                account_balance -= (staked_amount + entry_fee)
+                if entry_fee < 0: # Negative fee = credit/refund
+                    # remove staked amount from balance and add fee credit/refund
+                    account_balance = account_balance - staked_amount - entry_fee
+                else:
+                    account_balance -= (staked_amount + entry_fee)
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.high >= stop_loss:
@@ -310,7 +321,7 @@ class IStrategy(ABC):
             self.df.iloc[i, account_balance_col_index] = account_balance
 
             if account_balance < 0:
-                print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
+                print(f"\nWARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
         print()  # Jump to next line
 

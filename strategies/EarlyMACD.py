@@ -236,7 +236,11 @@ class EarlyMACD(IStrategy):
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
                 # Update staked and account_balance
-                account_balance -= (staked_amount + entry_fee)
+                if entry_fee < 0: # Negative fee = credit/refund
+                    # remove staked amount from balance and add fee credit/refund
+                    account_balance = account_balance - staked_amount - entry_fee
+                else:
+                    account_balance -= (staked_amount + entry_fee)
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.low <= stop_loss:
@@ -355,7 +359,11 @@ class EarlyMACD(IStrategy):
                 self.df.iloc[i, fee_col_index] += entry_fee
                 total_fees_paid += entry_fee
                 # Update staked and account_balance
-                account_balance -= (staked_amount + entry_fee)
+                if entry_fee < 0: # Negative fee = credit/refund
+                    # remove staked amount from balance and add fee credit/refund
+                    account_balance = account_balance - staked_amount - entry_fee
+                else:
+                    account_balance -= (staked_amount + entry_fee)
 
                 # We exit in the same candle we entered, hit stop loss
                 if row.high >= stop_loss:
@@ -453,7 +461,7 @@ class EarlyMACD(IStrategy):
             self.df.iloc[i, account_balance_col_index] = account_balance
 
             if account_balance < 0:
-                print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
+                print(f"\nWARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
         print()  # Jump to next line
 

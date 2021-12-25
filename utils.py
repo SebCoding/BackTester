@@ -166,4 +166,6 @@ def format_execution_time(seconds):
             output = output.replace(c, '')
         else:
             break
+    if len(output) == 0:
+        output = 'less than 1s'
     return output
