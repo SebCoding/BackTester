@@ -41,7 +41,7 @@ class IStrategy(ABC):
         pass
 
     def get_entry_fee(self, trade_amount):
-        return float(trade_amount) * self.MAKER_FEE_PCT
+        return round(float(trade_amount) * self.MAKER_FEE_PCT, 2)
 
     def get_take_profit_fee(self, trade_amount):
         return float(trade_amount) * self.MAKER_FEE_PCT
@@ -51,12 +51,11 @@ class IStrategy(ABC):
 
     def get_stake_and_entry_fee(self, amount):
         staked_amount = amount * self.TRADABLE_BALANCE_RATIO
-        entry_fee = self.get_entry_fee(staked_amount)
         if self.MAKER_FEE_PCT > 0:
-            # old = staked_amount
-            # staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
-            # print(f'staked_amount: {staked_amount}  -  {old - entry_fee}')
-            staked_amount = staked_amount - entry_fee
+            staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
+            entry_fee = self.get_entry_fee(staked_amount)
+        else:
+            entry_fee = self.get_entry_fee(staked_amount)
         return staked_amount, entry_fee
 
     # Call this method each time a processed to update progress on console
