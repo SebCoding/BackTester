@@ -1,7 +1,5 @@
-##################################################################################
-### Statistics
-##################################################################################
 import locale
+
 
 def print_trade_stats(total_wins, total_losses, nb_wins, nb_losses, total_fees_paid,
                       max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index):
@@ -25,6 +23,7 @@ def print_trade_stats(total_wins, total_losses, nb_wins, nb_losses, total_fees_p
     print(f'Total P/L: {locale.currency(total_wins + total_losses - total_fees_paid, grouping=True)}\n')
     # print('-------------------------------------------------------')
 
+
 def determine_win_or_loose(row):
     if row['win'] != 0:
         return 'W'
@@ -32,6 +31,7 @@ def determine_win_or_loose(row):
         return 'L'
     else:
         return None
+
 
 # Returns 4 values.
 # 1) Maximum number of consecutive win trades within the date range
@@ -45,28 +45,28 @@ def analyze_win_lose(df):
     values = list(filter(None, values))  # Remove nulls
 
     last_index = len(values) - 1
-    count_W = 0
-    count_L = 0
-    max_W = 0
-    max_L = 0
+    count_wins = 0
+    count_losses = 0
+    max_wins = 0
+    max_losses = 0
 
     for i, val in enumerate(values):
         if val == 'W':
-            count_W += 1
-            if i == last_index and count_W > max_W:
-                max_W = count_W
+            count_wins += 1
+            if i == last_index and count_wins > max_wins:
+                max_wins = count_wins
             elif i < last_index and values[i + 1] != val:
-                if count_W > max_W:
-                    max_W = count_W
-                count_W = 0
+                if count_wins > max_wins:
+                    max_wins = count_wins
+                count_wins = 0
         elif val == 'L':
-            count_L += 1
-            if i == last_index and count_L > max_L:
-                max_L = count_L
+            count_losses += 1
+            if i == last_index and count_losses > max_losses:
+                max_losses = count_losses
             elif i < last_index and values[i + 1] != val:
-                if count_L > max_L:
-                    max_L = count_L
-                count_L = 0
+                if count_losses > max_losses:
+                    max_losses = count_losses
+                count_losses = 0
         # print(f'Index[{i}] Value[{val}] - count_W: {count_W}, count_L: {count_L}, max_W: {max_W}, max_L: {max_L}')
 
     # Part 2: Win/Loose Index Metric
@@ -87,4 +87,4 @@ def analyze_win_lose(df):
 
         # print(f'[{i}][{val}]: current[{win_loose_index}] min[{min_win_loose_index}] max[{max_win_loose_index}]')
 
-    return max_W, max_L, min_win_loose_index, max_win_loose_index
+    return max_wins, max_losses, min_win_loose_index, max_win_loose_index

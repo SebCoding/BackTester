@@ -41,7 +41,7 @@ class IStrategy(ABC):
         pass
 
     def get_entry_fee(self, trade_amount):
-        return round(float(trade_amount) * self.MAKER_FEE_PCT, 2)
+        return float(trade_amount) * self.MAKER_FEE_PCT
 
     def get_take_profit_fee(self, trade_amount):
         return float(trade_amount) * self.MAKER_FEE_PCT
@@ -320,7 +320,7 @@ class IStrategy(ABC):
             self.df.iloc[i, account_balance_col_index] = account_balance
 
             if account_balance < 0:
-                print(f"\nWARNING: ********* Account balance is below zero. balance = {account_balance} *********")
+                print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
         print()  # Jump to next line
 
