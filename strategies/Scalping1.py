@@ -14,8 +14,25 @@ class Scalping1(IStrategy):
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 1.0
 
+    # Trend indicator: EMA - Exponential Moving Average
+    EMA_PERIODS = 50
+
+    # Momentum indicator: RSI - Relative Strength Index
+    RSI_PERIODS = 3
+    RSI_MIN_THRESHOLD = 20
+    RSI_MAX_THRESHOLD = 80
+
+    # Volatility indicator: ADX - Average Directional Index
+    ADX_PERIODS = 5
+    ADX_THRESHOLD = 30
+
     # Cannot run Strategy on data set less than this value
-    MIN_DATA_SIZE = 50
+    MIN_DATA_SIZE = EMA_PERIODS
+
+    # Indicator column names
+    ema_col_name = 'EMA' + str(EMA_PERIODS)
+    rsi_col_name = 'RSI' + str(RSI_PERIODS)
+    adx_col_name = 'ADX' + str(ADX_PERIODS)
 
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
@@ -24,19 +41,18 @@ class Scalping1(IStrategy):
         # Mark long entries
         self.df.loc[
             (
-                    (self.df['close'] > self.df['EMA50']) &  # price > EMA-50
-                    (self.df['RSI3'] < 20) &  # RSI < 20
-                    (self.df['ADX5'] > 30)  # ADX > 30
+                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > EMA
+                    (self.df[self.rsi_col_name] < self.RSI_MIN_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
+                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = 1
 
         # Mark short entries
-        # trend == 'Down' and macdsignal > 0 and cross == 1:
         self.df.loc[
             (
-                    (self.df['close'] < self.df['EMA50']) &  # price < EMA-50
-                    (self.df['RSI3'] > 80) &  # RSI > 80
-                    (self.df['ADX5'] > 30)  # ADX > 30
+                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < EMA-50
+                    (self.df[self.rsi_col_name] > self.RSI_MAX_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
 
@@ -48,7 +64,7 @@ class Scalping1(IStrategy):
         received_long_signal = False
         received_short_signal = False
         trade_status_col_index = self.df.columns.get_loc("trade_status")
-        rsi3_col_index = self.df.columns.get_loc("RSI3")
+        rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
 
         for i, row in enumerate(self.df.itertuples(index=True), 0):
             # if we receive another signal while we are not done processing the prior one,
@@ -59,11 +75,11 @@ class Scalping1(IStrategy):
                 received_short_signal = True
 
             # RSI exiting oversold area
-            if received_long_signal and self.df.iloc[i, rsi3_col_index] > 20:
+            if received_long_signal and self.df.iloc[i, rsi_col_index] > self.RSI_MIN_THRESHOLD:
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
                 received_long_signal = False
             # RSI exiting overbought area
-            elif received_short_signal and self.df.iloc[i, rsi3_col_index] < 80:
+            elif received_short_signal and self.df.iloc[i, rsi_col_index] < self.RSI_MAX_THRESHOLD:
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
                 received_short_signal = False
 
@@ -79,13 +95,14 @@ class Scalping1(IStrategy):
         self.df['volume'] = self.df['volume'].astype(float)
 
         # Trend Indicator. EMA-50
-        self.df['EMA50'] = talib.EMA(self.df['close'], timeperiod=50)
+        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA_PERIODS)
 
         # Momentum Indicator. RSI-3
-        self.df['RSI3'] = talib.RSI(self.df['close'], timeperiod=3)
+        self.df[self.rsi_col_name] = talib.RSI(self.df['close'], timeperiod=self.RSI_PERIODS)
 
         # Volatility Indicator. ADX-5
-        self.df['ADX5'] = talib.ADX(self.df['high'], self.df['low'], self.df['close'], timeperiod=5)
+        self.df[self.adx_col_name] = talib.ADX(self.df['high'], self.df['low'], self.df['close'],
+                                               timeperiod=self.ADX_PERIODS)
 
         # Identify the trend
         # self.df.loc[self.df['close'] > self.df['EMA-50'], 'trend'] = 'Up'
@@ -355,8 +372,8 @@ class Scalping1(IStrategy):
         self.df['stop_loss'] = self.df['stop_loss'].astype(float).round(2)
         self.df = self.df.round(decimals=2)
 
-        # Remove rows with nulls entries for EMA50
-        self.df = self.df.dropna(subset=['EMA50'])
+        # Remove rows with nulls entries for EMA
+        self.df = self.df.dropna(subset=[self.ema_col_name])
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
