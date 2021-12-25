@@ -13,52 +13,37 @@ from strategies.IStrategy import IStrategy
 
 
 class EarlyMACD(IStrategy):
-
     NAME = 'Early MACD'
-    
+
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 1.0
 
+    # Trend indicator: EMA - Exponential Moving Average
+    EMA_PERIODS = 200
+
+    # Trend following momentum indicator:
+    # MACD - Moving Average Convergence Divergence
+    MACD_FAST_PERIOD = 12
+    MACD_SLOW_PERIOD = 26
+    MACD_SIGNAL_PERIOD = 9
+
     # Cannot run Strategy on data set less than this value
-    MIN_DATA_SIZE = 200
+    MIN_DATA_SIZE = EMA_PERIODS
+
+    # Indicator column names
+    ema_col_name = 'EMA' + str(EMA_PERIODS)
 
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
 
-    # # Force download of all minutes data for the specified time frame
-    # def cache_minutes_data(self):
-    #     filename = self.exchange.get_exchange_data_filename_no_ext(
-    #         self.params['Pair'],
-    #         self.params['From_Time'],
-    #         self.params['To_Time'],
-    #         self.params['Interval'],
-    #         prior=0, include_time=True)
-    #     if not exists(filename):
-    #         minutes_df = self.exchange.get_candle_data(
-    #             0,
-    #             self.params['Pair'],
-    #             self.params['From_Time'],
-    #             self.params['To_Time'],
-    #             "1", include_prior=0, write_to_file=True, verbose=True
-    #         )
-
-    # ----------------------------------------------------------------------
-    # Function used determine trade entries (long/short)
-    # ----------------------------------------------------------------------
-    # def trade_entries(self, trend, macdsignal, cross):
-    #     if trend == 'Up' and macdsignal < 0 and cross == -1:
-    #         return "Enter Long"
-    #     elif trend == 'Down' and macdsignal > 0 and cross == 1:
-    #         return "Enter Short"
-    #     return None
-
-    def mark_entries(self):
+    # Identify the trade entries
+    def mark_trade_entry_signals(self):
         # Mark long entries
         self.df.loc[
             (
-                    (self.df['close'] > self.df['ema200']) &  # price > ema200
-                    (self.df['macdsignal'] < 0) &  # macdsignal < 0
+                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
+                    (self.df['MACDSIG'] < 0) &  # macdsignal < 0
                     (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
             ),
             'trade_status'] = TradeStatuses.EnterLong
@@ -67,8 +52,8 @@ class EarlyMACD(IStrategy):
         # trend == 'Down' and macdsignal > 0 and cross == 1:
         self.df.loc[
             (
-                    (self.df['close'] < self.df['ema200']) &  # price < ema200
-                    (self.df['macdsignal'] > 0) &  # macdsignal > 0
+                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
+                    (self.df['MACDSIG'] > 0) &  # macdsignal > 0
                     (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
             ),
             'trade_status'] = TradeStatuses.EnterShort
@@ -89,25 +74,28 @@ class EarlyMACD(IStrategy):
         # self.df = self.df[self.df.columns.intersection(final_table_columns)]
 
         # MACD - Moving Average Convergence/Divergence
-        macd, macdsignal, macdhist = talib.MACD(self.df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        self.df['macd'] = macd
-        self.df['macdsignal'] = macdsignal
+        macd, macdsignal, macdhist = talib.MACD(self.df['close'],
+                                                fastperiod=self.MACD_FAST_PERIOD,
+                                                slowperiod=self.MACD_SLOW_PERIOD,
+                                                signalperiod=self.MACD_SIGNAL_PERIOD)
+        self.df['MACD'] = macd
+        self.df['MACDSIG'] = macdsignal
 
         # EMA - Exponential Moving Average 200
-        self.df['ema200'] = talib.EMA(self.df['close'], timeperiod=200)
+        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA_PERIODS)
 
         # Identify the trend
-        self.df.loc[self.df['close'] > self.df['ema200'], 'trend'] = 'Up'
-        self.df.loc[self.df['close'] < self.df['ema200'], 'trend'] = 'Down'
+        # self.df.loc[self.df['close'] > self.df[self.ema_col_name], 'trend'] = 'Up'
+        # self.df.loc[self.df['close'] < self.df[self.ema_col_name], 'trend'] = 'Down'
 
         # macdsignal over macd then 1, under 0
-        self.df['O/U'] = np.where(self.df['macdsignal'] >= self.df['macd'], 1, 0)
+        self.df['O/U'] = np.where(self.df['MACDSIG'] >= self.df['MACD'], 1, 0)
 
         # macdsignal crosses macd
         self.df['cross'] = self.df['O/U'].diff()
 
         # Mark long/short entries
-        self.mark_entries()
+        self.mark_trade_entry_signals()
 
         # Add and Initialize new columns
         self.df['wallet'] = 0.0
@@ -120,31 +108,6 @@ class EarlyMACD(IStrategy):
         self.df['fee'] = 0.0
 
         return self.df
-    
-
-
-    def get_minutes_from_cached_file(self, from_time, to_time):
-        # from_str = from_time.strftime('%Y-%m-%d %H.%M')
-        # to_str = to_time.strftime('%Y-%m-%d %H.%M')
-        # print(f'Fetching {self.params["Pair"]} minute data from local cache. From[{from_str}], To[{to_str}]')
-        filename = self.exchange.get_exchange_data_filename_no_ext(
-            self.params['Pair'],
-            self.params['From_Time'],
-            self.params['To_Time'],
-            "1",
-            prior=0,
-            include_time=True)
-
-        if 'csv' in config.OUTPUT_FILE_FORMAT:
-            filename += '.csv'
-            if exists(filename):
-                return utils.read_csv_to_dataframe_by_range(filename, from_time, to_time)
-        elif 'xlsx' in config.OUTPUT_FILE_FORMAT:
-            filename += '.xlsx'
-            if exists(filename):
-                return utils.read_excel_to_dataframe(filename).loc[from_time:to_time]
-        else:
-            return None
 
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
@@ -169,12 +132,15 @@ class EarlyMACD(IStrategy):
             df2 = df.copy()
             df2 = df2.append(row)
 
-            macd, macdsignal, macdhist = talib.MACD(df2['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-            df2['macd'] = macd
-            df2['macdsignal'] = macdsignal
+            macd, macdsignal, macdhist = talib.MACD(df2['close'],
+                                                    fastperiod=self.MACD_FAST_PERIOD,
+                                                    slowperiod=self.MACD_SLOW_PERIOD,
+                                                    signalperiod=self.MACD_SIGNAL_PERIOD)
+            df2['MACD'] = macd
+            df2['MACDSIG'] = macdsignal
 
             # macdsignal over macd then 1, under 0
-            df2['O/U'] = np.where(df2['macdsignal'] >= df2['macd'], 1, 0)
+            df2['O/U'] = np.where(df2['MACDSIG'] >= df2['MACD'], 1, 0)
 
             # macdsignal crosses macd
             df2['cross'] = df2['O/U'].diff()
@@ -209,7 +175,7 @@ class EarlyMACD(IStrategy):
 
     # Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
-        
+
         account_balance = self.params['Initial_Capital']
         staked_amount = 0.0
         entry_price = 0.0
@@ -489,18 +455,10 @@ class EarlyMACD(IStrategy):
             if account_balance < 0:
                 print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
-        # Round all values to 2 decimals
-        self.df = self.df.round(decimals=2)
-
-        # Remove rows with nulls entries for macd, macdsignal or ema200
-        self.df = self.df.dropna(subset=['ema200'])
-
-        # Remove underscores from column names
-        self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
-
         print()  # Jump to next line
 
         # Save trade details to file
+        self.clean_df_prior_to_saving()
         utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Pair'],
                                   self.params['From_Time'],
                                   self.params['To_Time'], self.params['Interval'], self.df, False, True)
@@ -540,3 +498,15 @@ class EarlyMACD(IStrategy):
         )
 
         return self.df
+
+    def clean_df_prior_to_saving(self):
+        # Round all values to 2 decimals
+        self.df['take_profit'] = self.df['take_profit'].astype(float).round(2)
+        self.df['stop_loss'] = self.df['stop_loss'].astype(float).round(2)
+        self.df = self.df.round(decimals=2)
+
+        # Remove rows with nulls entries for ema200
+        self.df = self.df.dropna(subset=[self.ema_col_name])
+
+        # Remove underscores from column names
+        self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
