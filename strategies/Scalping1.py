@@ -19,8 +19,12 @@ class Scalping1(IStrategy):
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 3
-    RSI_MIN_THRESHOLD = 20
-    RSI_MAX_THRESHOLD = 80
+    RSI_MIN_LIMIT = 20
+    RSI_MAX_LIMIT = 80
+
+    # Trade entry RSI limits (by default equal to RSI min/max limits)
+    RSI_MIN_LIMIT_ENTRY = 20
+    RSI_MAX_LIMIT_ENTRY = 80
 
     # Volatility indicator: ADX - Average Directional Index
     ADX_PERIODS = 5
@@ -37,12 +41,12 @@ class Scalping1(IStrategy):
     def __init__(self, exchange, params, df):
         super().__init__(exchange, params, df)
 
-    def mark_entries(self):
+    def mark_trade_entry_signals(self):
         # Mark long entries
         self.df.loc[
             (
                     (self.df['close'] > self.df[self.ema_col_name]) &  # price > EMA
-                    (self.df[self.rsi_col_name] < self.RSI_MIN_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
+                    (self.df[self.rsi_col_name] < self.RSI_MIN_LIMIT) &  # RSI < RSI_MIN_THRESHOLD
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = 1
@@ -51,14 +55,13 @@ class Scalping1(IStrategy):
         self.df.loc[
             (
                     (self.df['close'] < self.df[self.ema_col_name]) &  # price < EMA-50
-                    (self.df[self.rsi_col_name] > self.RSI_MAX_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                    (self.df[self.rsi_col_name] > self.RSI_MAX_LIMIT) &  # RSI > RSI_MAX_THRESHOLD
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
 
-    # When we get a 'Enter Long' signal we only enter the trade when the RSI exists the oversold area
-    # When we get a 'Enter Short' signal we only enter the trade when the RSI exists the overbought area
-    def adjust_entry_points(self):
+    # When we get a signal we only enter the trade when the RSI exists the oversold/overbought area
+    def find_trade_entry_points(self):
 
         self.df['trade_status'] = None
         received_long_signal = False
@@ -66,6 +69,7 @@ class Scalping1(IStrategy):
         trade_status_col_index = self.df.columns.get_loc("trade_status")
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
 
+        # Iterate over all data to identify the real trade entry points
         for i, row in enumerate(self.df.itertuples(index=True), 0):
             # if we receive another signal while we are not done processing the prior one,
             # we ignore the new ones until the old one is processed
@@ -75,11 +79,11 @@ class Scalping1(IStrategy):
                 received_short_signal = True
 
             # RSI exiting oversold area
-            if received_long_signal and self.df.iloc[i, rsi_col_index] > self.RSI_MIN_THRESHOLD:
+            if received_long_signal and self.df.iloc[i, rsi_col_index] > self.RSI_MIN_LIMIT_ENTRY:
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
                 received_long_signal = False
             # RSI exiting overbought area
-            elif received_short_signal and self.df.iloc[i, rsi_col_index] < self.RSI_MAX_THRESHOLD:
+            elif received_short_signal and self.df.iloc[i, rsi_col_index] < self.RSI_MAX_LIMIT_ENTRY:
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
                 received_short_signal = False
 
@@ -108,12 +112,11 @@ class Scalping1(IStrategy):
         # self.df.loc[self.df['close'] > self.df['EMA-50'], 'trend'] = 'Up'
         # self.df.loc[self.df['close'] < self.df['EMA-50'], 'trend'] = 'Down'
 
-        # Mark long/short entries
-        self.mark_entries()
+        # Mark long/short signals
+        self.mark_trade_entry_signals()
 
-        # When we get a 'Enter Long' signal we only enter the trade when the RSI exists the oversold area
-        # When we get a 'Enter Short' signal we only enter the trade when the RSI exists the overbought area
-        self.adjust_entry_points()
+        # When we get a signal we only enter the trade when the RSI exists the oversold/overbought area
+        self.find_trade_entry_points()
 
         # Add and Initialize new columns
         self.df['wallet'] = 0.0
