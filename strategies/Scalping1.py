@@ -144,7 +144,7 @@ class Scalping1(IStrategy):
                 # Progress Bar at Console
                 self.update_progress_dots()
 
-                entry_price = row.open
+                entry_price = row.close
                 # Stop Loss / Take Profit
                 stop_loss = entry_price - (self.SL_PCT * entry_price)
                 take_profit = entry_price + (self.TP_PCT * entry_price)
@@ -247,7 +247,7 @@ class Scalping1(IStrategy):
                 # Progress Bar at Console
                 self.update_progress_dots()
 
-                entry_price = row.open
+                entry_price = row.close
                 # Stop Loss / Take Profit
                 stop_loss = entry_price + (self.SL_PCT * entry_price)
                 take_profit = entry_price - (self.TP_PCT * entry_price)
