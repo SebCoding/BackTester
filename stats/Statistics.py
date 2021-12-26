@@ -35,7 +35,7 @@ class Statistics:
     success_rate = property(get_success_rate)
 
     def get_total_pl(self):
-        return round(self.total_wins - self.total_losses - self.total_fees_paid, 2)
+        return round(self.total_wins + self.total_losses - self.total_fees_paid, 2)
 
     total_pl = property(get_total_pl)
 

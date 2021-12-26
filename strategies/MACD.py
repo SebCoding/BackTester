@@ -70,7 +70,7 @@ class MACD(IStrategy):
     # Step 2: Identify the trade entries
     def add_trade_entry_points(self):
         print('Adding entry points for all trades.')
-        # Mark long entries
+        # Enter long trade
         self.df.loc[
             (
                     (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
@@ -79,7 +79,7 @@ class MACD(IStrategy):
             ),
             'trade_status'] = TradeStatuses.EnterLong
 
-        # Mark short entries
+        # Enter short trade
         self.df.loc[
             (
                     (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
