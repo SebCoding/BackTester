@@ -1,47 +1,33 @@
-from datetime import datetime
 import time
 import warnings
+from datetime import datetime
 
-import pandas as pd
-
-import utils
-from exchanges import ByBit
 import config
-from exchanges.Binance import Binance
-from exchanges.ByBit import ByBit
+import utils
+from params import validate_params, load_test_cases_from_file
+from strategies.Scalping1 import Scalping1
 from strategies.MACD import MACD
 from strategies.EarlyMACD import EarlyMACD
-from strategies.Scalping1 import Scalping1
-from params import validate_params, load_test_cases_from_file
+
 
 # Ignore warnings when reading xlsx file containing list of values for dropdown
+from stats import stats_utils
+
 warnings.filterwarnings('ignore')
+
+# Do not delete
+# from strategies.Scalping1 import Scalping1
+# from strategies.MACD import MACD
+# from strategies.EarlyMACD import EarlyMACD
 
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
-    # print(f'---------------------------------------- TEST #{params["Test_Num"]} ----------------------------------------')
-    print(f'=========================================== TEST #{params["Test_Num"]} ===========================================')
+    print(f'============================================= TEST #{params["Test_Num"]} =============================================')
     execution_start = time.time()
     validate_params(params)
-
-    min_data_size_required = globals()[params['Strategy']].MIN_DATA_SIZE
-    exchange = globals()[params['Exchange']]()
-    df = exchange.get_candle_data(params['Test_Num'], params['Pair'],
-                                  params['From_Time'], params['To_Time'], params['Interval'],
-                                  include_prior=min_data_size_required, write_to_file=True, verbose=True)
-
-    if df is None:
-        print(f'\nNo data was returned from {exchange.NAME}. Unable to backtest strategy.')
-        raise Exception(f"No data returned by {exchange.NAME}")
-    elif len(df) <= min_data_size_required:
-        print(f'\nData rows = {len(df)}, less than MIN_DATA_SIZE={min_data_size_required}. Unable to backtest strategy.')
-        raise Exception("Unable to Run Strategy on Data Set")
-
-    strategy = globals()[params['Strategy']](exchange, params, df)
-    strategy.add_indicators_and_signals()
-    strategy.process_trades()
-
+    strategy = globals()[params['Strategy']](params)
+    strategy.run()
     exec_time = utils.format_execution_time(time.time() - execution_start)
     print(f'Test #{params["Test_Num"]} Execution Time: {exec_time}\n')
 
@@ -51,13 +37,8 @@ def main():
     test_cases_df = load_test_cases_from_file(config.TEST_CASES_FILE_PATH)
     # print(test_cases_df.to_string())
 
-    # Create DataFrame to store results
-    statistics_df = pd.DataFrame(
-        columns=['Test #', 'Exchange', 'Pair', 'From', 'To', 'Interval', 'Init Capital', 'TP %', 'SL %', 'Maker Fee %',
-                 'Taker Fee %',
-                 'Strategy', 'Wins', 'Losses', 'Trades', 'Success Rate', 'Loss Idx', 'Win Idx',
-                 'Wins $', 'Losses $', 'Fees $', 'Total P/L'])
-    # print(results_df.to_string())
+    # Create an empty DataFrame with only headers to store Statistics
+    statistics_df = stats_utils.get_initial_statistics_df()
 
     # Run back test each test case
     for index, row in test_cases_df.iterrows():

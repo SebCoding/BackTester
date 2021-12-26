@@ -67,13 +67,13 @@ def save_trades_to_file(test_num, exchange, pair, from_time, to_time, interval, 
         filename = filename + '.csv'
         df.to_csv(filename, index=True, header=True)
         if verbose:
-            print(f'File created => [{filename}]')
+            print(f'Trades file created => [{filename}]')
     if 'xlsx' in config.OUTPUT_FILE_FORMAT:
         filename = filename + '.xlsx'
         df.to_excel(filename, index=True, header=True)
         # to_excel_formatted(df, filename)
         if verbose:
-            print(f'File created => [{filename}]')
+            print(f'Trades file created => [{filename}]')
 
 
 # TODO: Find a way to format the Excel workbook prior to saving to file

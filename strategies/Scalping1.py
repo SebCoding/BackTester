@@ -1,7 +1,7 @@
 import pandas as pd
 import talib
 
-import stats
+from stats import stats_utils
 import utils
 from enums.TradeStatus import TradeStatuses
 from strategies.IStrategy import IStrategy
@@ -30,6 +30,9 @@ class Scalping1(IStrategy):
     ADX_PERIODS = 5
     ADX_THRESHOLD = 30
 
+    # Additional filter: wait an extra candle to confirm the direction of the trend
+    CONFIRMATION_FILTER = True
+
     # Cannot run Strategy on data set less than this value
     MIN_DATA_SIZE = EMA_PERIODS
 
@@ -38,11 +41,35 @@ class Scalping1(IStrategy):
     rsi_col_name = 'RSI' + str(RSI_PERIODS)
     adx_col_name = 'ADX' + str(ADX_PERIODS)
 
-    def __init__(self, exchange, params, df):
-        super().__init__(exchange, params, df)
+    def __init__(self, params):
+        super().__init__(params)
 
-    def mark_trade_entry_signals(self):
-        # Mark long entries
+    # Step 1: Calculate indicator values required to determine long/short signals
+    def add_indicators_and_signals(self):
+        print('Adding indicators and signals to data.')
+
+        # Set proper data types
+        self.df['open'] = self.df['open'].astype(float)
+        self.df['high'] = self.df['high'].astype(float)
+        self.df['low'] = self.df['low'].astype(float)
+        self.df['close'] = self.df['close'].astype(float)
+        self.df['volume'] = self.df['volume'].astype(float)
+
+        # Trend Indicator. EMA-50
+        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA_PERIODS)
+
+        # Momentum Indicator. RSI-3
+        self.df[self.rsi_col_name] = talib.RSI(self.df['close'], timeperiod=self.RSI_PERIODS)
+
+        # Volatility Indicator. ADX-5
+        self.df[self.adx_col_name] = talib.ADX(self.df['high'], self.df['low'], self.df['close'],
+                                               timeperiod=self.ADX_PERIODS)
+
+    # Step 2: Add trade entry points
+    # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
+    def add_trade_entry_points(self):
+        print('Adding entry points for all trades.')
+        # Mark long signals
         self.df.loc[
             (
                     (self.df['close'] > self.df[self.ema_col_name]) &  # price > EMA
@@ -51,7 +78,7 @@ class Scalping1(IStrategy):
             ),
             'signal'] = 1
 
-        # Mark short entries
+        # Mark short signals
         self.df.loc[
             (
                     (self.df['close'] < self.df[self.ema_col_name]) &  # price < EMA-50
@@ -59,9 +86,6 @@ class Scalping1(IStrategy):
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
-
-    # When we get a signal we only enter the trade when the RSI exists the oversold/overbought area
-    def find_trade_entry_points(self):
 
         self.df['trade_status'] = None
         received_long_signal = False
@@ -86,47 +110,6 @@ class Scalping1(IStrategy):
             elif received_short_signal and self.df.iloc[i, rsi_col_index] < self.RSI_MAX_LIMIT_ENTRY:
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
                 received_short_signal = False
-
-    # Calculate indicator values required to determine long/short signals
-    def add_indicators_and_signals(self):
-        print('Adding indicators and signals to data.')
-
-        # Set proper data types
-        self.df['open'] = self.df['open'].astype(float)
-        self.df['high'] = self.df['high'].astype(float)
-        self.df['low'] = self.df['low'].astype(float)
-        self.df['close'] = self.df['close'].astype(float)
-        self.df['volume'] = self.df['volume'].astype(float)
-
-        # Trend Indicator. EMA-50
-        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA_PERIODS)
-
-        # Momentum Indicator. RSI-3
-        self.df[self.rsi_col_name] = talib.RSI(self.df['close'], timeperiod=self.RSI_PERIODS)
-
-        # Volatility Indicator. ADX-5
-        self.df[self.adx_col_name] = talib.ADX(self.df['high'], self.df['low'], self.df['close'],
-                                               timeperiod=self.ADX_PERIODS)
-
-        # Identify the trend
-        # self.df.loc[self.df['close'] > self.df['EMA-50'], 'trend'] = 'Up'
-        # self.df.loc[self.df['close'] < self.df['EMA-50'], 'trend'] = 'Down'
-
-        # Mark long/short signals
-        self.mark_trade_entry_signals()
-
-        # When we get a signal we only enter the trade when the RSI exists the oversold/overbought area
-        self.find_trade_entry_points()
-
-        # Add and Initialize new columns
-        self.df['wallet'] = 0.0
-        self.df['take_profit'] = None
-        self.df['stop_loss'] = None
-        self.df['win'] = 0.0
-        self.df['loss'] = 0.0
-        self.df['fee'] = 0.0
-
-        return self.df
 
     def clean_df_prior_to_saving(self):
         # Round all values to 2 decimals

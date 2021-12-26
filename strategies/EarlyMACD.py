@@ -1,12 +1,9 @@
 import datetime as dt
-from os.path import exists
 
 import numpy as np
 import pandas as pd
 import talib
 
-import config
-import stats
 import utils
 from enums.TradeStatus import TradeStatuses
 from strategies.IStrategy import IStrategy
@@ -34,31 +31,10 @@ class EarlyMACD(IStrategy):
     # Indicator column names
     ema_col_name = 'EMA' + str(EMA_PERIODS)
 
-    def __init__(self, exchange, params, df):
-        super().__init__(exchange, params, df)
+    def __init__(self, params):
+        super().__init__(params)
 
-    # Identify the trade entries
-    def mark_trade_entry_signals(self):
-        # Mark long entries
-        self.df.loc[
-            (
-                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
-                    (self.df['MACDSIG'] < 0) &  # macdsignal < 0
-                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
-            ),
-            'trade_status'] = TradeStatuses.EnterLong
-
-        # Mark short entries
-        # trend == 'Down' and macdsignal > 0 and cross == 1:
-        self.df.loc[
-            (
-                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
-                    (self.df['MACDSIG'] > 0) &  # macdsignal > 0
-                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
-            ),
-            'trade_status'] = TradeStatuses.EnterShort
-
-    # Calculate indicator values required to determine long/short signals
+    # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
         print('Adding indicators and signals to data.')
 
@@ -94,20 +70,26 @@ class EarlyMACD(IStrategy):
         # macdsignal crosses macd
         self.df['cross'] = self.df['O/U'].diff()
 
-        # Mark long/short entries
-        self.mark_trade_entry_signals()
+    # Step 2: Identify the trade entries
+    def add_trade_entry_points(self):
+        print('Adding entry points for all trades.')
+        # Enter long trade
+        self.df.loc[
+            (
+                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
+                    (self.df['MACDSIG'] < 0) &  # macdsignal < 0
+                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
+            ),
+            'trade_status'] = TradeStatuses.EnterLong
 
-        # Add and Initialize new columns
-        self.df['wallet'] = 0.0
-        self.df['entry_time'] = None
-        self.df['entry_price'] = None
-        self.df['take_profit'] = None
-        self.df['stop_loss'] = None
-        self.df['win'] = 0.0
-        self.df['loss'] = 0.0
-        self.df['fee'] = 0.0
-
-        return self.df
+        # Enter short trade
+        self.df.loc[
+            (
+                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
+                    (self.df['MACDSIG'] > 0) &  # macdsignal > 0
+                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
+            ),
+            'trade_status'] = TradeStatuses.EnterShort
 
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
@@ -173,7 +155,8 @@ class EarlyMACD(IStrategy):
 
         return time_on_crossing, price_on_crossing
 
-    # Mark start, ongoing and end of trades, as well as calculate statistics
+    # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics
+    # We overwrite the process_trades() method from the IStrategy class for minute precision crossing
     def process_trades(self):
 
         account_balance = self.params['Initial_Capital']
@@ -183,14 +166,17 @@ class EarlyMACD(IStrategy):
         take_profit = 0.0
         trade_status = ''
 
-        # Stats
-        nb_wins = 0
-        nb_losses = 0
-        total_wins = 0.0
-        total_losses = 0.0
-        total_fees_paid = 0.0
-
         print(f'Processing trades using the [{self.NAME}] strategy')
+
+        # Add and Initialize new columns
+        self.df['wallet'] = 0.0
+        self.df['entry_time'] = None
+        self.df['entry_price'] = None
+        self.df['take_profit'] = None
+        self.df['stop_loss'] = None
+        self.df['win'] = 0.0
+        self.df['loss'] = 0.0
+        self.df['fee'] = 0.0
 
         # Download locally all data for all minutes during time range (very slow)
         # self.cache_minutes_data()
@@ -234,9 +220,9 @@ class EarlyMACD(IStrategy):
                 # Entry Fee
                 staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
                 self.df.iloc[i, fee_col_index] += entry_fee
-                total_fees_paid += entry_fee
+                self.stats.total_fees_paid += entry_fee
                 # Update staked and account_balance
-                if entry_fee < 0: # Negative fee = credit/refund
+                if entry_fee < 0:  # Negative fee = credit/refund
                     # remove staked amount from balance and add fee credit/refund
                     account_balance = account_balance - staked_amount - entry_fee
                 else:
@@ -247,13 +233,13 @@ class EarlyMACD(IStrategy):
                     loss = staked_amount * self.SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
                     self.df.iloc[i, losses_col_index] = loss
-                    total_losses += loss
+                    self.stats.total_losses += loss
                     trade_status = ''
-                    nb_losses += 1
+                    self.stats.nb_losses += 1
                     # Exit Fee 'loss'
                     exit_fee = self.get_stop_loss_fee(staked_amount - loss)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + loss - exit_fee
                     staked_amount = 0.0
@@ -263,13 +249,13 @@ class EarlyMACD(IStrategy):
                     win = staked_amount * self.TP_PCT
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
                     self.df.iloc[i, wins_col_index] = win
-                    total_wins += win
+                    self.stats.total_wins += win
                     trade_status = ''
-                    nb_wins += 1
+                    self.stats.nb_wins += 1
                     # Exit Fee 'win'
                     exit_fee = self.get_take_profit_fee(staked_amount + win)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + win - exit_fee
                     staked_amount = 0.0
@@ -287,13 +273,13 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                     self.df.iloc[i, entry_price_col_index] = entry_price
-                    total_losses += loss
+                    self.stats.total_losses += loss
                     trade_status = ''
-                    nb_losses += 1
+                    self.stats.nb_losses += 1
                     # Exit Fee 'loss'
                     exit_fee = self.get_stop_loss_fee(staked_amount - loss)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + loss - exit_fee
                     staked_amount = 0.0
@@ -305,13 +291,13 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                     self.df.iloc[i, entry_price_col_index] = entry_price
-                    total_wins += win
+                    self.stats.total_wins += win
                     trade_status = ''
-                    nb_wins += 1
+                    self.stats.nb_wins += 1
                     # Exit Fee 'win'
                     exit_fee = self.get_take_profit_fee(staked_amount + win)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + win - exit_fee
                     staked_amount = 0.0
@@ -357,9 +343,9 @@ class EarlyMACD(IStrategy):
                 # Entry Fee
                 staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
                 self.df.iloc[i, fee_col_index] += entry_fee
-                total_fees_paid += entry_fee
+                self.stats.total_fees_paid += entry_fee
                 # Update staked and account_balance
-                if entry_fee < 0: # Negative fee = credit/refund
+                if entry_fee < 0:  # Negative fee = credit/refund
                     # remove staked amount from balance and add fee credit/refund
                     account_balance = account_balance - staked_amount - entry_fee
                 else:
@@ -370,13 +356,13 @@ class EarlyMACD(IStrategy):
                     loss = staked_amount * self.SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
                     self.df.iloc[i, losses_col_index] = loss
-                    total_losses += loss
+                    self.stats.total_losses += loss
                     trade_status = ''
-                    nb_losses += 1
+                    self.stats.nb_losses += 1
                     # Exit Fee 'loss'
                     exit_fee = self.get_stop_loss_fee(staked_amount + loss)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + loss - exit_fee
                     staked_amount = 0.0
@@ -386,13 +372,13 @@ class EarlyMACD(IStrategy):
                     win = staked_amount * self.TP_PCT
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
                     self.df.iloc[i, wins_col_index] = win
-                    total_wins += win
+                    self.stats.total_wins += win
                     trade_status = ''
-                    nb_wins += 1
+                    self.stats.nb_wins += 1
                     # Exit Fee 'win'
                     exit_fee = self.get_take_profit_fee(staked_amount - win)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + win - exit_fee
                     staked_amount = 0.0
@@ -410,13 +396,13 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                     self.df.iloc[i, entry_price_col_index] = entry_price
-                    total_losses += loss
+                    self.stats.total_losses += loss
                     trade_status = ''
-                    nb_losses += 1
+                    self.stats.nb_losses += 1
                     # Exit Fee 'loss'
                     exit_fee = self.get_stop_loss_fee(staked_amount + loss)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + loss - exit_fee
                     staked_amount = 0.0
@@ -428,13 +414,13 @@ class EarlyMACD(IStrategy):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     # self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                     self.df.iloc[i, entry_price_col_index] = entry_price
-                    total_wins += win
+                    self.stats.total_wins += win
                     trade_status = ''
-                    nb_wins += 1
+                    self.stats.nb_wins += 1
                     # Exit Fee 'win'
                     exit_fee = self.get_take_profit_fee(staked_amount - win)
                     self.df.iloc[i, fee_col_index] += exit_fee
-                    total_fees_paid += exit_fee
+                    self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + win - exit_fee
                     staked_amount = 0.0
@@ -464,47 +450,6 @@ class EarlyMACD(IStrategy):
                 print(f"\nWARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
         print()  # Jump to next line
-
-        # Save trade details to file
-        self.clean_df_prior_to_saving()
-        utils.save_trades_to_file(self.params['Test_Num'], self.params['Exchange'], self.params['Pair'],
-                                  self.params['From_Time'],
-                                  self.params['To_Time'], self.params['Interval'], self.df, False, True)
-
-        max_conseq_wins, max_conseq_losses, min_win_loose_index, max_win_loose_index = stats.analyze_win_lose(self.df)
-
-        # Store results in Results DataFrame
-        total_trades = nb_wins + nb_losses
-        success_rate = (nb_wins / total_trades * 100) if total_trades != 0 else 0
-        self.params['Statistics'] = self.params['Statistics'].append(
-            {
-                'Test #': self.params['Test_Num'],
-                'Exchange': self.params['Exchange'],
-                'Pair': self.params['Pair'],
-                'From': self.params['From_Time'].strftime("%Y-%m-%d"),
-                'To': self.params['To_Time'].strftime("%Y-%m-%d"),
-                'Interval': self.params['Interval'],
-                'Init Capital': f'{self.params["Initial_Capital"]:,.2f}',
-                'TP %': self.params['Take_Profit_PCT'],
-                'SL %': self.params['Stop_Loss_PCT'],
-                'Maker Fee %': self.MAKER_FEE_PCT * 100,
-                'Taker Fee %': self.TAKER_FEE_PCT * 100,
-                'Strategy': self.params['Strategy'],
-
-                'Wins': nb_wins,
-                'Losses': nb_losses,
-                'Trades': total_trades,
-                'Success Rate': f'{success_rate:.1f}%',
-                'Loss Idx': min_win_loose_index,
-                'Win Idx': max_win_loose_index,
-                'Wins $': f'{total_wins:,.2f}',
-                'Losses $': f'{total_losses:,.2f}',
-                'Fees $': f'{total_fees_paid:,.2f}',
-                'Total P/L': f'{(total_wins + total_losses - total_fees_paid):,.2f}'
-            },
-            ignore_index=True,
-        )
-
         return self.df
 
     def clean_df_prior_to_saving(self):

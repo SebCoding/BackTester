@@ -1,9 +1,6 @@
 import numpy as np
-import pandas as pd
 import talib
 
-import stats
-import utils
 from enums.TradeStatus import TradeStatuses
 from strategies.IStrategy import IStrategy
 
@@ -30,33 +27,10 @@ class MACD(IStrategy):
     # Indicator column names
     ema_col_name = 'EMA' + str(EMA_PERIODS)
 
-    def __init__(self, exchange, params, df):
-        super().__init__(exchange, params, df)
+    def __init__(self, params):
+        super().__init__(params)
 
-    # Identify the trade entries
-    def mark_trade_entry_signals(self):
-        # Mark long entries
-        self.df.loc[
-            (
-                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
-                    (self.df['MACDSIG'] < 0) &  # macdsignal < 0
-                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
-            ),
-            'trade_status'] = TradeStatuses.EnterLong
-
-        # Mark short entries
-        self.df.loc[
-            (
-                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
-                    (self.df['MACDSIG'] > 0) &  # macdsignal > 0
-                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
-            ),
-            'trade_status'] = TradeStatuses.EnterShort
-
-        # We enter the trade on the next candle after the signal candle has completed
-        # self.df['trade_status'] = self.df['trade_status'].shift(1)
-
-    # Calculate indicator values required to determine long/short signals
+    # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
         print('Adding indicators and signals to data.')
 
@@ -92,18 +66,30 @@ class MACD(IStrategy):
         # macdsignal crosses macd
         self.df['cross'] = self.df['O/U'].diff()
 
-        # Mark long/short entries
-        self.mark_trade_entry_signals()
 
-        # Add and Initialize new columns
-        self.df['wallet'] = 0.0
-        self.df['take_profit'] = None
-        self.df['stop_loss'] = None
-        self.df['win'] = 0.0
-        self.df['loss'] = 0.0
-        self.df['fee'] = 0.0
+    # Step 2: Identify the trade entries
+    def add_trade_entry_points(self):
+        print('Adding entry points for all trades.')
+        # Mark long entries
+        self.df.loc[
+            (
+                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
+                    (self.df['MACDSIG'] < 0) &  # macdsignal < 0
+                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
+            ),
+            'trade_status'] = TradeStatuses.EnterLong
 
-        return self.df
+        # Mark short entries
+        self.df.loc[
+            (
+                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
+                    (self.df['MACDSIG'] > 0) &  # macdsignal > 0
+                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
+            ),
+            'trade_status'] = TradeStatuses.EnterShort
+
+        # We enter the trade on the next candle after the signal candle has completed
+        # self.df['trade_status'] = self.df['trade_status'].shift(1)
 
     def clean_df_prior_to_saving(self):
         # Round all values to 2 decimals
