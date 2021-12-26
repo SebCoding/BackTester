@@ -28,7 +28,8 @@ class Statistics:
 
     def get_success_rate(self):
         if self.total_trades != 0:
-            return round(float(self.nb_wins) / float(self.total_trades), 1)
+            rate = (float(self.nb_wins) / float(self.total_trades)) * 100
+            return round(rate, 1)
         else:
             return 0
 
