@@ -1,3 +1,5 @@
+import math
+import time
 from abc import ABC, abstractmethod
 from os.path import exists
 
@@ -7,11 +9,14 @@ import utils
 
 
 class IExchange(ABC):
-
     NAME = 'abstract'
 
     # Dictionary of pairs used by exchange to define intervals for candle data
     interval_map = None
+
+    # Use these values to handle timeouts in subclasses
+    RETRY_WAIT_TIME = 5  # Wait time in seconds
+    MAX_RETRIES = 20
 
     def __init__(self):
         super().__init__()
@@ -21,6 +26,14 @@ class IExchange(ABC):
     @abstractmethod
     def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
+        pass
+
+    @abstractmethod
+    def get_maker_fee(self, pair):
+        pass
+
+    @abstractmethod
+    def get_taker_fee(self, pair):
         pass
 
     def get_exchange_data_filename_no_ext(self, pair, from_time, to_time, interval, prior=0, include_time=False):
@@ -84,13 +97,12 @@ class IExchange(ABC):
         #     raise Exception(f'Invalid pair [{pair}]. Expected list of values: {valid_pairs_str}')
         pass
 
-    @abstractmethod
-    def get_maker_fee(self, pair):
-        pass
-
-    @abstractmethod
-    def get_taker_fee(self, pair):
-        pass
-
-
-
+    # generated random timeouts for testing purposes
+    def random_timeout(self):
+        import random
+        # Generate timeouts 1 out x times
+        x = 4
+        rand = math.floor(random.uniform(0, x))
+        # print(f'random_timeout={rand}')
+        if rand == 0:
+            raise TimeoutError(f'Randomly generated TimeoutError from {self.NAME} testing method')

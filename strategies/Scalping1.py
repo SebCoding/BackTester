@@ -31,7 +31,7 @@ class Scalping1(IStrategy):
     ADX_THRESHOLD = 30
 
     # Additional filter: wait an extra candle to confirm the direction of the trend
-    CONFIRMATION_FILTER = True  # Boolean True/False
+    CONFIRMATION_FILTER = False  # Boolean True/False
 
     # Cannot run Strategy on data set less than this value
     MIN_DATA_SIZE = EMA_PERIODS

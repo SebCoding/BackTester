@@ -1,4 +1,6 @@
 import datetime as dt
+import math
+import time
 
 import pandas as pd
 from pybit import HTTP
@@ -37,15 +39,15 @@ class ByBit(IExchange):
         self.my_api_secret_key = api_keys.BYBIT_API_SECRET
         self.my_api_endpoint = 'https://api.bybit.com'
         # Unauthenticated
-        self.session_unauth = HTTP(endpoint=self.my_api_endpoint)
+        self.session_unauthenticated = HTTP(endpoint=self.my_api_endpoint)
         # Authenticated
-        self.session_auth = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key,
-                                 api_secret=self.my_api_secret_key)
+        self.session_authenticated = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key,
+                                          api_secret=self.my_api_secret_key)
         # self.load_markets()
 
     def load_markets(self):
         print(f'Loading {self.NAME} markets.')
-        markets = self.session_unauth.query_symbol()['result']
+        markets = self.session_unauthenticated.query_symbol()['result']
         self.markets_df = pd.DataFrame.from_dict(markets, orient='columns')
         self.markets_df = self.markets_df[['name', 'alias', 'status', 'base_currency',
                                            'quote_currency', 'taker_fee', 'maker_fee']]
@@ -97,8 +99,7 @@ class ByBit(IExchange):
         to_time_stamp = to_time.timestamp()
 
         while last_datetime_stamp < to_time_stamp:
-            result = self.session_auth.query_kline(symbol=pair, interval=self.interval_map[interval],
-                                                   **{'from': last_datetime_stamp})['result']
+            result = self._get_query_kline(pair, self.interval_map[interval], last_datetime_stamp)
             tmp_df = pd.DataFrame(result)
 
             if tmp_df is None or (len(tmp_df.index) == 0):
@@ -135,6 +136,22 @@ class ByBit(IExchange):
             self.save_candle_data(pair, from_time, to_time, interval, df, prior=include_prior,
                                   include_time=True if interval == '1' else False, verbose=False)
         return df
+
+    def _get_query_kline(self, pair, interval, from_time):
+        attempt_count = 1
+        while attempt_count <= self.MAX_RETRIES:
+            try:
+                # self.random_timeout()
+                result = self.session_authenticated.query_kline(symbol=pair, interval=interval, **{'from': from_time})['result']
+                return result
+            except TimeoutError:
+                print(
+                    f'TimeoutError on {self.NAME}. Attempt {attempt_count}, waiting {self.RETRY_WAIT_TIME}s before retry.')
+                time.sleep(self.RETRY_WAIT_TIME)
+                attempt_count += 1
+        raise TimeoutError(
+            f'Unable to fetch data from {self.NAME}. MAX_RETRIES={self.MAX_RETRIES} has been reached.')
+
 
 # Testing Class
 # ex = ExchangeByBit()

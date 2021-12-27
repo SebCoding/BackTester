@@ -1,3 +1,5 @@
+import time
+
 import pandas as pd
 import datetime as dt
 
@@ -77,9 +79,8 @@ class Binance(IExchange):
         start_datetime_stamp = start_time.timestamp() * 1000
         to_time_stamp = to_time.timestamp() * 1000
 
-        result = self.client.get_historical_klines(pair, self.interval_map[interval], int(start_datetime_stamp),
-                                                   int(to_time_stamp), limit=1000,
-                                                   klines_type=HistoricalKlinesType.FUTURES)
+        result = self._get_historical_klines(pair, self.interval_map[interval],
+                                             int(start_datetime_stamp), int(to_time_stamp))
 
         # delete unwanted data - just keep date, open, high, low, close, volume
         for line in result:
@@ -115,6 +116,23 @@ class Binance(IExchange):
             self.save_candle_data(pair, from_time, to_time, interval, tmp_df, prior=include_prior,
                                   include_time=True if interval == '1' else False, verbose=False)
         return tmp_df
+
+    def _get_historical_klines(self, pair, interval, from_time, to_time):
+        attempt_count = 1
+        while attempt_count <= self.MAX_RETRIES:
+            try:
+                # self.random_timeout()
+                result = self.client.get_historical_klines(pair, interval, from_time, to_time, limit=1000,
+                                                           klines_type=HistoricalKlinesType.FUTURES)
+                return result
+            except TimeoutError:
+                print(
+                    f'TimeoutError on {self.NAME}. Attempt {attempt_count}, waiting {self.RETRY_WAIT_TIME}s before retry.')
+                time.sleep(self.RETRY_WAIT_TIME)
+                attempt_count += 1
+        raise TimeoutError(
+            f'Unable to fetch data from {self.NAME}. MAX_RETRIES={self.MAX_RETRIES} has been reached.')
+
 
 # Testing Class
 # ex = ExchangeBinance()
