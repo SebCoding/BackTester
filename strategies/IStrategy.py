@@ -41,6 +41,7 @@ class IStrategy(ABC):
         self.TP_PCT = self.params['Take_Profit_PCT'] / 100
         self.SL_PCT = self.params['Stop_Loss_PCT'] / 100
         self.exchange = globals()[params['Exchange']]()
+
         self.MAKER_FEE_PCT = self.exchange.get_maker_fee(params['Pair'])
         self.TAKER_FEE_PCT = self.exchange.get_taker_fee(params['Pair'])
         self.stats = Statistics()

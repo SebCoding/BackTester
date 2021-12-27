@@ -184,3 +184,15 @@ class ExchangeCCXT:
         # if pair not in valid_pairs:
         #     raise Exception(f'Invalid pair [{pair}]. Expected list of values: {valid_pairs_str}')
         pass
+
+    def get_maker_fee(self, pair):
+        # self.validate_pair(pair)
+        # print(f'maker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "maker_fee"].iat[0]}')
+        # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'maker_fee'].iat[0])
+        return -0.00025
+
+    def get_taker_fee(self, pair):
+        # self.validate_pair(pair)
+        # print(f'taker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "taker_fee"].iat[0]}')
+        # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'taker_fee'].iat[0])
+        return 0.00075
