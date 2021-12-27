@@ -10,7 +10,7 @@ OUTPUT_FILE_FORMAT = ['csv']  # Preferred format(s) for the output: csv, xlsx or
 SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
 
 # Supported Exchange List
-SUPPORTED_EXCHANGES = ['Binance', 'ByBit']
+SUPPORTED_EXCHANGES = ['Binance', 'ByBit', 'ByBit2']
 
 # Valid Intervals. Some intervals are not supported by some exchanges
 VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w']

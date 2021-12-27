@@ -8,8 +8,10 @@ import utils
 from enums.TradeStatus import TradeStatuses
 from stats.Statistics import Statistics
 
+# Do not remove exchange imports
 from exchanges.Binance import Binance
 from exchanges.ByBit import ByBit
+from exchanges.ByBit2 import ByBit2
 
 """ 
     Base Abstract Strategy Class.
