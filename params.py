@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import datetime as dt
 from utils import read_excel_to_dataframe
@@ -67,7 +69,13 @@ def validate_params(params):
 
 def load_test_cases_from_file(filename):
     print(f'Loading test cases from file => [{filename}]')
+
+    # Disable warning because openpyxl issues warnings because the TestCases.xlsx
+    # file uses dropdown to enforce integrity of values passed
+    warnings.simplefilter("ignore", UserWarning)
     df = read_excel_to_dataframe(filename)
+    warnings.simplefilter("default", UserWarning)
+
     df.dropna(inplace=True)
 
     # Adjust column types

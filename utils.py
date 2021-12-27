@@ -9,21 +9,6 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 import config
 
 
-##################################################################################
-# Change Timezone if Needed
-##################################################################################
-# my_list simply unpacks the list elements and pass each one of them as parameters to the print function
-# print(*pytz.all_timezones, sep='\n')
-
-# In windows command prompt try:
-#     This gives current timezone: tzutil /g
-#     This gives a list of timezones: tzutil /l
-#     This will set the timezone: tzutil /s "Central America Standard Time"
-
-# os.system('tzutil /s "Eastern Standard Time"')
-# os.system('tzutil /s "Singapore Standard Time"')
-# time.strftime('%Y-%m-
-
 # Adjust from_time to include prior X entries for that interval for ema200
 def adjust_from_time(from_time, interval, include_prior):
     if interval not in config.VALID_INTERVALS:

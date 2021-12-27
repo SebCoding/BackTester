@@ -1,11 +1,12 @@
 import time
 import warnings
+
 from datetime import datetime
 
 import config
 import utils
 from params import validate_params, load_test_cases_from_file
-from strategies.Scalping1 import Scalping1
+from strategies.ScalpingEmaRsiAdx import ScalpingEmaRsiAdx
 from strategies.MACD import MACD
 from strategies.EarlyMACD import EarlyMACD
 
@@ -13,7 +14,7 @@ from strategies.EarlyMACD import EarlyMACD
 # Ignore warnings when reading xlsx file containing list of values for dropdown
 from stats import stats_utils
 
-warnings.filterwarnings('ignore')
+
 
 # Do not delete
 # from strategies.Scalping1 import Scalping1
@@ -28,6 +29,8 @@ def backtest(params):
     validate_params(params)
     strategy = globals()[params['Strategy']](params)
     strategy.run()
+
+    print(f'{strategy.exchange.NAME} API request count: {strategy.exchange.CURRENT_REQUESTS_COUNT}')
     exec_time = utils.format_execution_time(time.time() - execution_start)
     print(f'Test #{params["Test_Num"]} Execution Time: {exec_time}\n')
 
@@ -39,6 +42,9 @@ def main():
 
     # Create an empty DataFrame with only headers to store Statistics
     statistics_df = stats_utils.get_initial_statistics_df()
+
+    # Disable ResourceWarning, pybit library seems to not be closing its ssl.SSLSocket properly
+    warnings.simplefilter("ignore", ResourceWarning)
 
     # Run back test each test case
     for index, row in test_cases_df.iterrows():
@@ -58,6 +64,8 @@ def main():
 
         backtest(params)
         statistics_df = params['Statistics']
+
+    warnings.simplefilter("default", ResourceWarning)
 
     # Save results to file
     now = datetime.now().strftime('[%Y-%m-%d] [%H.%M.%S]')

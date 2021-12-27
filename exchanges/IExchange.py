@@ -1,5 +1,4 @@
 import math
-import time
 from abc import ABC, abstractmethod
 from os.path import exists
 
@@ -14,9 +13,7 @@ class IExchange(ABC):
     # Dictionary of pairs used by exchange to define intervals for candle data
     interval_map = None
 
-    # Use these values to handle timeouts in subclasses
-    RETRY_WAIT_TIME = 5  # Wait time in seconds
-    MAX_RETRIES = 20
+    CURRENT_REQUESTS_COUNT = 0
 
     def __init__(self):
         super().__init__()
@@ -44,7 +41,7 @@ class IExchange(ABC):
             from_str = from_time.strftime('%Y-%m-%d')
             to_str = to_time.strftime('%Y-%m-%d')
         if prior > 0:
-            filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str} [-{prior}]'
+            filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str} [-{prior}] '
         else:
             filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str}'
         return filename

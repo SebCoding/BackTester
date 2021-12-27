@@ -16,5 +16,5 @@ SUPPORTED_EXCHANGES = ['Binance', 'ByBit']
 VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w']
 
 # Implemented Strategies
-IMPLEMENTED_STRATEGIES = ['MACD', 'EarlyMACD', 'Scalping1']
+IMPLEMENTED_STRATEGIES = ['MACD', 'EarlyMACD', 'ScalpingEmaRsiAdx']
 

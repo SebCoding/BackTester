@@ -1,8 +1,12 @@
 import datetime as dt
+import logging
 import math
 import time
 
 import pandas as pd
+import pybit
+import requests
+import urllib3.exceptions
 from pybit import HTTP
 
 import api_keys
@@ -17,6 +21,10 @@ class ByBit(IExchange):
     # Make sure these values are floats, use decimal notation with a dot
     MAKER_FEE_PCT = -0.025
     TAKER_FEE_PCT = 0.075
+
+    USE_TESTNET = False  # Boolean True/False
+    TESTNET_API_ENDPOINT = 'https://api-testnet.bybit.com'
+    MAINNET_API_ENDPOINT = 'https://api.bybit.com'
 
     interval_map = {
         "1m": "1",
@@ -33,16 +41,54 @@ class ByBit(IExchange):
         "1w": "W"
     }
 
+    # Use these values to handle timeouts in subclasses
+    RETRY_WAIT_TIME = 10  # Wait time in seconds
+    MAX_RETRIES = 20
+
     def __init__(self):
         super().__init__()
         self.my_api_key = api_keys.BYBIT_API_KEY
         self.my_api_secret_key = api_keys.BYBIT_API_SECRET
-        self.my_api_endpoint = 'https://api.bybit.com'
-        # Unauthenticated
-        self.session_unauthenticated = HTTP(endpoint=self.my_api_endpoint)
+
+        if self.USE_TESTNET:
+            # Testnet
+            self.my_api_endpoint = self.TESTNET_API_ENDPOINT
+        else:
+            # Mainnet
+            self.my_api_endpoint = self.MAINNET_API_ENDPOINT
+
+        force_retry = True
+        max_retries = 4  # default is 3
+        retry_delay = 3  # default is 3 seconds
+        request_timeout = 30  # default is 10 seconds
+        log_requests = True
+        logging_level = logging.INFO  # default is logging.INFO
+        spot = False  # spot or futures
+
         # Authenticated
-        self.session_authenticated = HTTP(endpoint=self.my_api_endpoint, api_key=self.my_api_key,
-                                          api_secret=self.my_api_secret_key)
+        self.session_authenticated = HTTP(
+            endpoint=self.my_api_endpoint,
+            api_key=self.my_api_key,
+            api_secret=self.my_api_secret_key,
+            request_timeout=request_timeout,
+            max_retries=max_retries,
+            retry_delay=retry_delay,
+            force_retry=force_retry,
+            log_requests=log_requests,
+            logging_level=logging_level,
+            spot=spot)
+
+        # Unauthenticated
+        self.session_unauthenticated = HTTP(
+            endpoint=self.my_api_endpoint,
+            request_timeout=request_timeout,
+            max_retries=max_retries,
+            retry_delay=retry_delay,
+            force_retry=force_retry,
+            log_requests=log_requests,
+            logging_level=logging_level,
+            spot=spot)
+
         # self.load_markets()
 
     def load_markets(self):
@@ -99,7 +145,12 @@ class ByBit(IExchange):
         to_time_stamp = to_time.timestamp()
 
         while last_datetime_stamp < to_time_stamp:
-            result = self._get_query_kline(pair, self.interval_map[interval], last_datetime_stamp)
+            result = self.session_authenticated.query_kline(
+                symbol=pair,
+                interval=self.interval_map[interval],
+                **{'from': last_datetime_stamp})[
+                'result']
+            self.CURRENT_REQUESTS_COUNT += 1
             tmp_df = pd.DataFrame(result)
 
             if tmp_df is None or (len(tmp_df.index) == 0):
@@ -122,7 +173,8 @@ class ByBit(IExchange):
 
         # Only keep relevant columns OHLC(V)
         df.rename(columns={'symbol': 'pair'}, inplace=True)
-        df = df[['pair', 'open', 'high', 'low', 'close', 'volume']]
+        df = df.loc[:, ['pair', 'open', 'high', 'low', 'close', 'volume']]
+        # df = df[['pair', 'open', 'high', 'low', 'close', 'volume']]
 
         # Set proper data types
         df['open'] = df['open'].astype(float)
@@ -136,21 +188,6 @@ class ByBit(IExchange):
             self.save_candle_data(pair, from_time, to_time, interval, df, prior=include_prior,
                                   include_time=True if interval == '1' else False, verbose=False)
         return df
-
-    def _get_query_kline(self, pair, interval, from_time):
-        attempt_count = 1
-        while attempt_count <= self.MAX_RETRIES:
-            try:
-                # self.random_timeout()
-                result = self.session_authenticated.query_kline(symbol=pair, interval=interval, **{'from': from_time})['result']
-                return result
-            except TimeoutError:
-                print(
-                    f'TimeoutError on {self.NAME}. Attempt {attempt_count}, waiting {self.RETRY_WAIT_TIME}s before retry.')
-                time.sleep(self.RETRY_WAIT_TIME)
-                attempt_count += 1
-        raise TimeoutError(
-            f'Unable to fetch data from {self.NAME}. MAX_RETRIES={self.MAX_RETRIES} has been reached.')
 
 
 # Testing Class

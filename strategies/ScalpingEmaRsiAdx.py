@@ -1,14 +1,11 @@
-import pandas as pd
 import talib
 
-from stats import stats_utils
-import utils
 from enums.TradeStatus import TradeStatuses
 from strategies.IStrategy import IStrategy
 
 
-class Scalping1(IStrategy):
-    NAME = 'Scalping1'
+class ScalpingEmaRsiAdx(IStrategy):
+    NAME = 'ScalpingEmaRsiAdx'
 
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
@@ -101,7 +98,10 @@ class Scalping1(IStrategy):
         i_max_condition_filter = len(self.df.index) - 1
 
         # Iterate over all data to identify the real trade entry points
-        for i, row in enumerate(self.df.itertuples(index=True), 0):
+        # Skip first 49 lines where EMA50 is null => offset
+        offset = self.MIN_DATA_SIZE - 1
+        for i, row in enumerate(self.df.iloc[offset:, :].itertuples(index=True), 0):
+            i += offset
             # if we receive another signal while we are not done processing the prior one,
             # we ignore the new ones until the old one is processed
             if row.signal == 1 and not received_long_signal and not received_short_signal:
@@ -109,27 +109,29 @@ class Scalping1(IStrategy):
             elif row.signal == -1 and not received_long_signal and not received_short_signal:
                 received_short_signal = True
 
+            cur_rsi = self.df.iloc[i, rsi_col_index]
+            cur_high = self.df.iloc[i, high_col_index]
+            cur_low = self.df.iloc[i, low_col_index]
+
             # RSI exiting oversold area. Long Entry
-            if received_long_signal and self.df.iloc[i, rsi_col_index] > self.RSI_MIN_THRESHOLD_ENTRY:
+            if received_long_signal and cur_rsi > self.RSI_MIN_THRESHOLD_ENTRY:
                 if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
                     # Next candle must close higher than high of current
-                    next_close = self.df.iloc[i+1, close_col_index]
-                    cur_high = self.df.iloc[i, high_col_index]
+                    next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close > cur_high:  # confirmation
-                        self.df.iloc[i+1, trade_status_col_index] = TradeStatuses.EnterLong
+                        self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterLong
                     received_long_signal = False
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
                     received_long_signal = False
             # RSI exiting overbought area. Short Entry
-            elif received_short_signal and self.df.iloc[i, rsi_col_index] < self.RSI_MAX_THRESHOLD_ENTRY:
+            elif received_short_signal and cur_rsi < self.RSI_MAX_THRESHOLD_ENTRY:
                 if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
                     # Next candle must close lower than low of current
-                    next_close = self.df.iloc[i+1, close_col_index]
-                    cur_low = self.df.iloc[i, low_col_index]
+                    next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close < cur_low:  # confirmation
-                        self.df.iloc[i+1, trade_status_col_index] = TradeStatuses.EnterShort
-                    received_long_signal = False
+                        self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterShort
+                    received_short_signal = False
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
                     received_short_signal = False

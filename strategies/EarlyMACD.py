@@ -44,7 +44,8 @@ class EarlyMACD(IEarlyStrategy, MACD):
         # minutes_df = self.get_minutes_from_cached_file(from_time, to_time)
 
         # Only keep the close column
-        minutes_df = minutes_df[['close']]
+        # To remove warning use below syntax instead of: minutes_df = minutes_df[['close']]
+        minutes_df = minutes_df.loc[:, ['close']]
 
         # Convert column type to float
         minutes_df['close'] = minutes_df['close'].astype(float)

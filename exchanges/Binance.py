@@ -3,6 +3,9 @@ import time
 import pandas as pd
 import datetime as dt
 
+from requests import ReadTimeout
+from urllib3.exceptions import ReadTimeoutError
+
 import api_keys
 import utils
 from exchanges.IExchange import IExchange
@@ -39,6 +42,8 @@ class Binance(IExchange):
         self.my_api_key = api_keys.BINANCE_API_KEY
         self.my_api_secret = api_keys.BINANCE_API_SECRET_KEY
         self.client = Client(api_keys.BINANCE_API_KEY, api_keys.BINANCE_API_SECRET_KEY)
+        # overwrite request timeout
+        # self.client.REQUEST_TIMEOUT = 10  # default 10 seconds
 
     def get_maker_fee(self, pair):
         return 0.0002 * 0.9  # 10% rebate for paying fees in BNB
@@ -79,8 +84,15 @@ class Binance(IExchange):
         start_datetime_stamp = start_time.timestamp() * 1000
         to_time_stamp = to_time.timestamp() * 1000
 
-        result = self._get_historical_klines(pair, self.interval_map[interval],
-                                             int(start_datetime_stamp), int(to_time_stamp))
+        result = self.client.get_historical_klines(
+            pair,
+            self.interval_map[interval],
+            int(start_datetime_stamp),
+            int(to_time_stamp),
+            limit=1000,
+            klines_type=HistoricalKlinesType.FUTURES
+        )
+        self.CURRENT_REQUESTS_COUNT += 1
 
         # delete unwanted data - just keep date, open, high, low, close, volume
         for line in result:
@@ -98,7 +110,8 @@ class Binance(IExchange):
         tmp_df['pair'] = pair
 
         # Only keep relevant columns OHLC(V)
-        tmp_df = tmp_df[['pair', 'open', 'close', 'high', 'low', 'volume']]
+        # tmp_df = tmp_df[['pair', 'open', 'close', 'high', 'low', 'volume']]
+        tmp_df = tmp_df.loc[:, ['pair', 'open', 'high', 'low', 'close', 'volume']]
 
         # Set proper data types
         tmp_df['open'] = tmp_df['open'].astype(float)
@@ -116,22 +129,6 @@ class Binance(IExchange):
             self.save_candle_data(pair, from_time, to_time, interval, tmp_df, prior=include_prior,
                                   include_time=True if interval == '1' else False, verbose=False)
         return tmp_df
-
-    def _get_historical_klines(self, pair, interval, from_time, to_time):
-        attempt_count = 1
-        while attempt_count <= self.MAX_RETRIES:
-            try:
-                # self.random_timeout()
-                result = self.client.get_historical_klines(pair, interval, from_time, to_time, limit=1000,
-                                                           klines_type=HistoricalKlinesType.FUTURES)
-                return result
-            except TimeoutError:
-                print(
-                    f'TimeoutError on {self.NAME}. Attempt {attempt_count}, waiting {self.RETRY_WAIT_TIME}s before retry.')
-                time.sleep(self.RETRY_WAIT_TIME)
-                attempt_count += 1
-        raise TimeoutError(
-            f'Unable to fetch data from {self.NAME}. MAX_RETRIES={self.MAX_RETRIES} has been reached.')
 
 
 # Testing Class
