@@ -364,7 +364,7 @@ class IStrategy(ABC):
         # Save trade details to file
         self.clean_df_prior_to_saving()
         utils.save_trades_to_file(self.params['Test_Num'],
-                                  self.params['Exchange'],
+                                  self.exchange.NAME,
                                   self.params['Pair'],
                                   self.params['From_Time'],
                                   self.params['To_Time'],
@@ -378,7 +378,7 @@ class IStrategy(ABC):
         self.params['Statistics'] = self.params['Statistics'].append(
             {
                 'Test #': self.params['Test_Num'],
-                'Exchange': self.params['Exchange'],
+                'Exchange': self.exchange.NAME,
                 'Pair': self.params['Pair'],
                 'From': self.params['From_Time'].strftime("%Y-%m-%d"),
                 'To': self.params['To_Time'].strftime("%Y-%m-%d"),

@@ -24,8 +24,6 @@ class ByBit2(IExchange):
     TAKER_FEE_PCT = 0.075
 
     USE_TESTNET = False  # Boolean True/False
-    TESTNET_API_ENDPOINT = 'https://api-testnet.bybit.com'
-    MAINNET_API_ENDPOINT = 'https://api.bybit.com'
 
     interval_map = {
         "1m": "1m",
@@ -42,23 +40,19 @@ class ByBit2(IExchange):
         "1w": "1w"
     }
 
-    # Use these values to handle timeouts in subclasses
-    RETRY_WAIT_TIME = 10  # Wait time in seconds
-    MAX_RETRIES = 20
-
     def __init__(self):
         super().__init__()
         # self.my_api_key = api_keys.BYBIT_API_KEY
         # self.my_api_secret_key = api_keys.BYBIT_API_SECRET
 
-        # if self.USE_TESTNET:
-        #     # Testnet
-        #     self.my_api_endpoint = self.TESTNET_API_ENDPOINT
-        # else:
-        #     # Mainnet
-        #     self.my_api_endpoint = self.MAINNET_API_ENDPOINT
-
         self.bybit = ccxt.bybit()
+        if self.USE_TESTNET:
+            # Testnet
+            self.bybit.set_sandbox_mode(True)
+            self.NAME += '-Testnet'
+        else:
+            # Mainnet
+            self.bybit.set_sandbox_mode(False)
 
     def load_markets(self):
         print(f'Loading {self.NAME} markets.')
