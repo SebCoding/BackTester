@@ -28,7 +28,7 @@ class MACD(BaseStrategy):
 
     def __init__(self, params):
         super().__init__(params)
-        self.NAME = self.__class__.__name__.replace('_', ' ')
+        self.NAME = self.__class__.__name__
 
     # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):

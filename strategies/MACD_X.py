@@ -30,7 +30,7 @@ class MACD_X(BaseStrategy_X, MACD):
     def __init__(self, params):
         MACD.__init__(self, params)
         BaseStrategy_X.__init__(self, params)
-        self.NAME = self.__class__.__name__.replace('_', ' ')
+        self.NAME = self.__class__.__name__
 
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
