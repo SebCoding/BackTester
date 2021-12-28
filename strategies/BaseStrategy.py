@@ -158,41 +158,42 @@ class BaseStrategy(ABC):
                 else:
                     account_balance -= (staked_amount + entry_fee)
 
-                # We exit in the same candle we entered, hit stop loss
-                if row.low <= stop_loss:
-                    loss = staked_amount * self.SL_PCT * -1
-                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
-                    self.df.iloc[i, losses_col_index] = loss
-                    self.stats.total_losses += loss
-                    trade_status = ''
-                    self.stats.nb_losses += 1
-                    # Exit Fee 'loss'
-                    exit_fee = self.get_stop_loss_fee(staked_amount - loss)
-                    self.df.iloc[i, fee_col_index] += exit_fee
-                    self.stats.total_fees_paid += exit_fee
-                    # Update staked and account_balance
-                    account_balance += staked_amount + loss - exit_fee
-                    staked_amount = 0.0
-
-                # We exit in the same candle we entered, take profit
-                elif row.high >= take_profit:
-                    win = staked_amount * self.TP_PCT
-                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
-                    self.df.iloc[i, wins_col_index] = win
-                    self.stats.total_wins += win
-                    trade_status = ''
-                    self.stats.nb_wins += 1
-                    # Exit Fee 'win'
-                    exit_fee = self.get_take_profit_fee(staked_amount + win)
-                    self.df.iloc[i, fee_col_index] += exit_fee
-                    self.stats.total_fees_paid += exit_fee
-                    # Update staked and account_balance
-                    account_balance += staked_amount + win - exit_fee
-                    staked_amount = 0.0
-
+                # # We exit in the same candle we entered, hit stop loss
+                # if row.low <= stop_loss:
+                #     loss = staked_amount * self.SL_PCT * -1
+                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
+                #     self.df.iloc[i, losses_col_index] = loss
+                #     self.stats.total_losses += loss
+                #     trade_status = ''
+                #     self.stats.nb_losses += 1
+                #     # Exit Fee 'loss'
+                #     exit_fee = self.get_stop_loss_fee(staked_amount - loss)
+                #     self.df.iloc[i, fee_col_index] += exit_fee
+                #     self.stats.total_fees_paid += exit_fee
+                #     # Update staked and account_balance
+                #     account_balance += staked_amount + loss - exit_fee
+                #     staked_amount = 0.0
+                #
+                # # We exit in the same candle we entered, take profit
+                # elif row.high >= take_profit:
+                #     win = staked_amount * self.TP_PCT
+                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
+                #     self.df.iloc[i, wins_col_index] = win
+                #     self.stats.total_wins += win
+                #     trade_status = ''
+                #     self.stats.nb_wins += 1
+                #     # Exit Fee 'win'
+                #     exit_fee = self.get_take_profit_fee(staked_amount + win)
+                #     self.df.iloc[i, fee_col_index] += exit_fee
+                #     self.stats.total_fees_paid += exit_fee
+                #     # Update staked and account_balance
+                #     account_balance += staked_amount + win - exit_fee
+                #     staked_amount = 0.0
+                #
+                #
+                # else:
                 # We just entered TradeStatuses.EnterLong in this candle so set the status to TradeStatuses.Long
-                else:
-                    trade_status = TradeStatuses.Long
+                trade_status = TradeStatuses.Long
 
             elif trade_status in [TradeStatuses.Long] and pd.isnull(row.trade_status):
                 if row.low <= stop_loss:
@@ -236,8 +237,7 @@ class BaseStrategy(ABC):
             elif trade_status in [TradeStatuses.Long] and row.trade_status in [TradeStatuses.EnterLong,
                                                                                TradeStatuses.EnterShort]:
                 # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
-                # signal, ignore the signal and override the value with TradeStatuses.Long, we are already in a
-                # TradeStatuses.Long trade
+                # ignore the signal and override the value with TradeStatuses.Long, we are already in a long
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.Long
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss
@@ -265,41 +265,42 @@ class BaseStrategy(ABC):
                 else:
                     account_balance -= (staked_amount + entry_fee)
 
-                # We exit in the same candle we entered, hit stop loss
-                if row.high >= stop_loss:
-                    loss = staked_amount * self.SL_PCT * -1
-                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
-                    self.df.iloc[i, losses_col_index] = loss
-                    self.stats.total_losses += loss
-                    trade_status = ''
-                    self.stats.nb_losses += 1
-                    # Exit Fee 'loss'
-                    exit_fee = self.get_stop_loss_fee(staked_amount + loss)
-                    self.df.iloc[i, fee_col_index] += exit_fee
-                    self.stats.total_fees_paid += exit_fee
-                    # Update staked and account_balance
-                    account_balance += staked_amount + loss - exit_fee
-                    staked_amount = 0.0
-
-                # We exit in the same candle we entered, hit take profit
-                elif row.low <= take_profit:
-                    win = staked_amount * self.TP_PCT
-                    self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
-                    self.df.iloc[i, wins_col_index] = win
-                    self.stats.total_wins += win
-                    trade_status = ''
-                    self.stats.nb_wins += 1
-                    # Exit Fee 'win'
-                    exit_fee = self.get_take_profit_fee(staked_amount - win)
-                    self.df.iloc[i, fee_col_index] += exit_fee
-                    self.stats.total_fees_paid += exit_fee
-                    # Update staked and account_balance
-                    account_balance += staked_amount + win - exit_fee
-                    staked_amount = 0.0
-
+                # # We exit in the same candle we entered, hit stop loss
+                # if row.high >= stop_loss:
+                #     loss = staked_amount * self.SL_PCT * -1
+                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
+                #     self.df.iloc[i, losses_col_index] = loss
+                #     self.stats.total_losses += loss
+                #     trade_status = ''
+                #     self.stats.nb_losses += 1
+                #     # Exit Fee 'loss'
+                #     exit_fee = self.get_stop_loss_fee(staked_amount + loss)
+                #     self.df.iloc[i, fee_col_index] += exit_fee
+                #     self.stats.total_fees_paid += exit_fee
+                #     # Update staked and account_balance
+                #     account_balance += staked_amount + loss - exit_fee
+                #     staked_amount = 0.0
+                #
+                # # We exit in the same candle we entered, hit take profit
+                # elif row.low <= take_profit:
+                #     win = staked_amount * self.TP_PCT
+                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
+                #     self.df.iloc[i, wins_col_index] = win
+                #     self.stats.total_wins += win
+                #     trade_status = ''
+                #     self.stats.nb_wins += 1
+                #     # Exit Fee 'win'
+                #     exit_fee = self.get_take_profit_fee(staked_amount - win)
+                #     self.df.iloc[i, fee_col_index] += exit_fee
+                #     self.stats.total_fees_paid += exit_fee
+                #     # Update staked and account_balance
+                #     account_balance += staked_amount + win - exit_fee
+                #     staked_amount = 0.0
+                #
+                #
+                # else:
                 # We just entered TradeStatuses.EnterShort in this candle, so set the status to TradeStatuses.Short
-                else:
-                    trade_status = TradeStatuses.Short
+                trade_status = TradeStatuses.Short
 
             elif trade_status in [TradeStatuses.Short] and pd.isnull(row.trade_status):
                 if row.high >= stop_loss:
@@ -343,8 +344,7 @@ class BaseStrategy(ABC):
             elif trade_status in [TradeStatuses.Short] and row.trade_status in [TradeStatuses.EnterLong,
                                                                                 TradeStatuses.EnterShort]:
                 # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
-                # signal, ignore the signal and override the value with TradeStatuses.Long, we are already in a
-                # TradeStatuses.Short trade
+                # ignore the signal and override the value with TradeStatuses.Long, we are already in a short
                 self.df.iloc[i, trade_status_col_index] = TradeStatuses.Short
                 self.df.iloc[i, tp_col_index] = take_profit
                 self.df.iloc[i, sl_col_index] = stop_loss

@@ -141,12 +141,13 @@ def read_csv_to_dataframe_by_range(filename, from_time, to_time):
 
 
 def format_execution_time(seconds):
+    # Remove days and keep remainder in seconds
     seconds = seconds % (24 * 3600)
-    hour = seconds // 3600
+    hours = seconds // 3600
     seconds %= 3600
     minutes = seconds // 60
     seconds %= 60
-    output = "%02dh %02dm %02ds" % (hour, minutes, seconds)
+    output = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
     for c in output:
         if c in ['0', ':', 'h', 'm', 's', ' ']:
             output = output.replace(c, '')
