@@ -14,3 +14,4 @@ class TradeStatuses(str, Enum):
     Short = 'Short'
     ExitShort = 'Exit Short'
 
+

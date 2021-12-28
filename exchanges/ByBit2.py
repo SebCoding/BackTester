@@ -49,25 +49,21 @@ class ByBit2(IExchange):
         self.bybit.options['adjustForTimeDifference'] = False
         self.bybit.timeout = 30000  # number in milliseconds, default 10000
 
-    def load_markets(self):
-        print(f'Loading {self.NAME} markets.')
-        # markets = self.session_unauthenticated.query_symbol()['result']
-        # self.markets_df = pd.DataFrame.from_dict(markets, orient='columns')
-        # self.markets_df = self.markets_df[['name', 'alias', 'status', 'base_currency',
-        #                                    'quote_currency', 'taker_fee', 'maker_fee']]
-        # print(self.markets_df.to_string())
 
     def get_maker_fee(self, pair):
         # self.validate_pair(pair)
         # print(f'maker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "maker_fee"].iat[0]}')
         # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'maker_fee'].iat[0])
-        return -0.00025
+        market = self.bybit.market(pair)
+        return market['maker']
 
     def get_taker_fee(self, pair):
         # self.validate_pair(pair)
         # print(f'taker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "taker_fee"].iat[0]}')
         # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'taker_fee'].iat[0])
-        return 0.00075
+        # return 0.00075
+        market = self.bybit.market(pair)
+        return market['taker']
 
     def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):

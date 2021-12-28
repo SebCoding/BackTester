@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
+from exchanges.ExchangeCCXT import ExchangeCCXT
 from stats import stats_utils
 import utils
 from enums.TradeStatus import TradeStatuses
@@ -40,8 +41,8 @@ class IStrategy(ABC):
         self.progress_counter = 0
         self.TP_PCT = self.params['Take_Profit_PCT'] / 100
         self.SL_PCT = self.params['Stop_Loss_PCT'] / 100
-        self.exchange = globals()[params['Exchange']]()
-
+        # self.exchange = globals()[params['Exchange']]()
+        self.exchange = ExchangeCCXT(params['Exchange'].lower())
         self.MAKER_FEE_PCT = self.exchange.get_maker_fee(params['Pair'])
         self.TAKER_FEE_PCT = self.exchange.get_taker_fee(params['Pair'])
         self.stats = Statistics()
@@ -138,7 +139,7 @@ class IStrategy(ABC):
         for i, row in enumerate(self.df.itertuples(index=True), 0):
 
             # ------------------------------- Longs -------------------------------
-            if trade_status == '' and row.trade_status == TradeStatuses.EnterLong:
+            if trade_status == '' and row.trade_status == TradeStatuses.EnterLong and self.entry_is_valid(i):
 
                 # Progress Bar at Console
                 self.update_progress_dots()
@@ -245,7 +246,7 @@ class IStrategy(ABC):
                 self.df.iloc[i, sl_col_index] = stop_loss
 
             # ------------------------------- Shorts -------------------------------
-            elif trade_status == '' and row.trade_status == TradeStatuses.EnterShort:
+            elif trade_status == '' and row.trade_status == TradeStatuses.EnterShort and self.entry_is_valid(i):
 
                 # Progress Bar at Console
                 self.update_progress_dots()
@@ -413,3 +414,10 @@ class IStrategy(ABC):
             if self.progress_counter > self.PROGRESS_COUNTER_MAX:
                 self.progress_counter = 0
                 print()
+
+    # Used to validate if we should bypass the current trade entry
+    # returns true by default and should be redefined in subclasses if needed
+    # For example, we might encounter a trade entry, but the signal has been
+    # generated during a prior trade therefore we might want to bypass this trade
+    def entry_is_valid(self, current_index):
+        return True

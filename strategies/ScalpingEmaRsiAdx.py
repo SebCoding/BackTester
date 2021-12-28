@@ -1,3 +1,5 @@
+import datetime
+
 import talib
 
 from enums.TradeStatus import TradeStatuses
@@ -84,18 +86,23 @@ class ScalpingEmaRsiAdx(IStrategy):
             ),
             'signal'] = -1
 
+        self.df['signal_offset'] = None
         self.df['trade_status'] = None
+
         received_long_signal = False
         received_short_signal = False
 
         close_col_index = self.df.columns.get_loc("close")
         high_col_index = self.df.columns.get_loc("high")
         low_col_index = self.df.columns.get_loc("low")
+        signal_offset_col_index = self.df.columns.get_loc("signal_offset")
         trade_status_col_index = self.df.columns.get_loc("trade_status")
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
 
         # Index limit that can be used when the CONFIRMATION_FILTER is True
         i_max_condition_filter = len(self.df.index) - 1
+
+        signal_offset = -1
 
         # Iterate over all data to identify the real trade entry points
         # Skip first 49 lines where EMA50 is null => offset
@@ -106,8 +113,10 @@ class ScalpingEmaRsiAdx(IStrategy):
             # we ignore the new ones until the old one is processed
             if row.signal == 1 and not received_long_signal and not received_short_signal:
                 received_long_signal = True
+                signal_offset = i
             elif row.signal == -1 and not received_long_signal and not received_short_signal:
                 received_short_signal = True
+                signal_offset = i
 
             cur_rsi = self.df.iloc[i, rsi_col_index]
             cur_high = self.df.iloc[i, high_col_index]
@@ -120,9 +129,11 @@ class ScalpingEmaRsiAdx(IStrategy):
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close > cur_high:  # confirmation
                         self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterLong
+                        self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
                     received_long_signal = False
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
+                    self.df.iloc[i, signal_offset_col_index] = signal_offset - i
                     received_long_signal = False
             # RSI exiting overbought area. Short Entry
             elif received_short_signal and cur_rsi < self.RSI_MAX_THRESHOLD_ENTRY:
@@ -131,10 +142,30 @@ class ScalpingEmaRsiAdx(IStrategy):
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close < cur_low:  # confirmation
                         self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterShort
+                        self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
                     received_short_signal = False
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
+                    self.df.iloc[i, signal_offset_col_index] = signal_offset - i
                     received_short_signal = False
+
+    # Check if there is a trade exit between current trade potential entry and signal that generated it.
+    # If yes, that means this trade entry has been generated based a signal that happened during another
+    # trade and must be ignored
+    def entry_is_valid(self, current_index):
+        signal_offset_col_index = self.df.columns.get_loc("signal_offset")
+        trade_status_col_index = self.df.columns.get_loc("trade_status")
+        offset = self.df.iloc[current_index, signal_offset_col_index]
+        exit_statuses = [TradeStatuses.ExitLong, TradeStatuses.ExitShort,
+                         TradeStatuses.EnterExitLong, TradeStatuses.EnterExitShort]
+
+        for i in range(current_index+offset, current_index, 1):
+            if self.df.iloc[i, trade_status_col_index] in exit_statuses:
+                # Erase invalid trade entry
+                self.df.iloc[current_index, trade_status_col_index] = None
+                self.df.iloc[current_index, signal_offset_col_index] = None
+                return False
+        return True
 
     def clean_df_prior_to_saving(self):
         # Round all values to 2 decimals
@@ -143,7 +174,7 @@ class ScalpingEmaRsiAdx(IStrategy):
         self.df = self.df.round(decimals=2)
 
         # Remove rows with nulls entries for EMA
-        self.df = self.df.dropna(subset=[self.ema_col_name])
+        #self.df = self.df.dropna(subset=[self.ema_col_name])
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))

@@ -37,6 +37,7 @@ def idx2datetime(index_value):
 
 def save_trades_to_file(test_num, exchange, pair, from_time, to_time, interval, df, include_time=False, verbose=True):
     test_num = str(test_num)
+    pair = pair.replace('/', '-')
 
     if include_time:
         from_str = from_time.strftime('%Y-%m-%d %H.%M')

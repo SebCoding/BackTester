@@ -22,6 +22,7 @@ class ExchangeCCXT:
 
     def __init__(self, name):
         super().__init__()
+        self.NAME = name.capitalize()
         self.exchange = getattr(ccxt, name)()
 
         # exchange_id = name
@@ -84,8 +85,8 @@ class ExchangeCCXT:
         while last_datetime_stamp < to_time_stamp:
             result = self.exchange.fetch_ohlcv(
                 symbol=pair,
-                timeframe=self.interval_map[interval],
-                since=last_datetime_stamp
+                timeframe=interval,
+                since=int(last_datetime_stamp)
             )
             tmp_df = pd.DataFrame(result, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
             # Add pair column
@@ -125,6 +126,7 @@ class ExchangeCCXT:
         return df
 
     def get_exchange_data_filename_no_ext(self, pair, from_time, to_time, interval, prior=0, include_time=False):
+        pair = pair.replace('/', '-')
         if include_time:
             from_str = from_time.strftime('%Y-%m-%d %H.%M')
             to_str = to_time.strftime('%Y-%m-%d %H.%M')
@@ -132,7 +134,7 @@ class ExchangeCCXT:
             from_str = from_time.strftime('%Y-%m-%d')
             to_str = to_time.strftime('%Y-%m-%d')
         if prior > 0:
-            filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str} [-{prior}] '
+            filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str} [-{prior}]'
         else:
             filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str}'
         return filename
@@ -171,7 +173,7 @@ class ExchangeCCXT:
             return None
 
     def validate_interval(self, interval):
-        valid_intervals = list(self.interval_map.keys())
+        valid_intervals = list(self.exchange.timeframes.keys())
         valid_intervals_str = ' '
         valid_intervals_str = valid_intervals_str.join(valid_intervals)
         if interval not in valid_intervals:
@@ -189,10 +191,13 @@ class ExchangeCCXT:
         # self.validate_pair(pair)
         # print(f'maker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "maker_fee"].iat[0]}')
         # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'maker_fee'].iat[0])
-        return -0.00025
+        market = self.exchange.market(pair)
+        return market['maker']
 
     def get_taker_fee(self, pair):
         # self.validate_pair(pair)
         # print(f'taker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "taker_fee"].iat[0]}')
         # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'taker_fee'].iat[0])
-        return 0.00075
+        # return 0.00075
+        market = self.exchange.market(pair)
+        return market['taker']

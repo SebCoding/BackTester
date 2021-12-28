@@ -30,7 +30,7 @@ def backtest(params):
     strategy = globals()[params['Strategy']](params)
     strategy.run()
 
-    print(f'{strategy.exchange.NAME} API request count: {strategy.exchange.CURRENT_REQUESTS_COUNT}')
+    # print(f'{strategy.exchange.NAME} API request count: {strategy.exchange.CURRENT_REQUESTS_COUNT}')
     exec_time = utils.format_execution_time(time.time() - execution_start)
     print(f'Test #{params["Test_Num"]} Execution Time: {exec_time}\n')
 
