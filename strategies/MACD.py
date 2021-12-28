@@ -2,11 +2,10 @@ import numpy as np
 import talib
 
 from enums.TradeStatus import TradeStatuses
-from strategies.IStrategy import IStrategy
+from strategies.BaseStrategy import BaseStrategy
 
 
-class MACD(IStrategy):
-    NAME = 'MACD'
+class MACD(BaseStrategy):
 
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
@@ -29,6 +28,7 @@ class MACD(IStrategy):
 
     def __init__(self, params):
         super().__init__(params)
+        self.NAME = self.__class__.__name__.replace('_', ' ')
 
     # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
@@ -65,7 +65,6 @@ class MACD(IStrategy):
 
         # macdsignal crosses macd
         self.df['cross'] = self.df['O/U'].diff()
-
 
     # Step 2: Identify the trade entries
     def add_trade_entry_points(self):

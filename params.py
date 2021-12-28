@@ -79,8 +79,10 @@ def load_test_cases_from_file(filename):
     df.dropna(inplace=True)
 
     # Adjust column types
+    df.index = df.index.astype(int)
     df['Interval'] = df['Interval'].astype(str)
     df['Initial Capital'] = df['Initial Capital'].astype(float)
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
+    print(df.to_string())
     return df

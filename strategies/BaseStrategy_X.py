@@ -9,10 +9,11 @@ import pandas as pd
 
 import utils
 from enums.TradeStatus import TradeStatuses
-from strategies.IStrategy import IStrategy
+from enums.TradeTypes import TradeTypes
+from strategies.BaseStrategy import BaseStrategy
 
 
-class IEarlyStrategy(IStrategy):
+class BaseStrategy_X(BaseStrategy):
 
     def __init__(self, params):
         super().__init__(params)
@@ -20,7 +21,7 @@ class IEarlyStrategy(IStrategy):
     # The early strategy that will inherit this class needs to implement this
     # function to find the exact point in time when the strategy criteria are met
     @abstractmethod
-    def find_exact_trade_entry(self, df, from_time, to_time, delta=0):
+    def find_exact_trade_entry(self, df, from_time, to_time, trade_type, delta=0):
         pass
 
     # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics
@@ -75,8 +76,8 @@ class IEarlyStrategy(IStrategy):
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
-                entry_time, entry_price = self.find_exact_trade_entry(self.df[['close']].iloc[0:i], start_time,
-                                                                      end_time)
+                entry_time, entry_price = \
+                    self.find_exact_trade_entry(self.df[['high', 'low', 'close']].iloc[0:i], start_time, end_time, TradeTypes.Long)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')
@@ -198,8 +199,9 @@ class IEarlyStrategy(IStrategy):
                 # Find exact crossing and price to the minute
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
-                entry_time, entry_price = self.find_exact_trade_entry(self.df[['close']].iloc[0:i], start_time,
-                                                                      end_time)
+                entry_time, entry_price = \
+                    self.find_exact_trade_entry(self.df[['high', 'low', 'close']].iloc[0:i], start_time, end_time,
+                                                TradeTypes.Short)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')

@@ -11,10 +11,10 @@ from pybit import HTTP
 
 import api_keys
 import utils
-from exchanges.IExchange import IExchange
+from exchanges.BaseExchange import BaseExchange
 
 
-class ByBit(IExchange):
+class ByBit(BaseExchange):
     NAME = 'ByBit'
 
     # Modify maker/taker fees here for the ByBit exchange

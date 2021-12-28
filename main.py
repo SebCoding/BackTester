@@ -6,14 +6,15 @@ from datetime import datetime
 import config
 import utils
 from params import validate_params, load_test_cases_from_file
-from strategies.ScalpingEmaRsiAdx import ScalpingEmaRsiAdx
-from strategies.MACD import MACD
-from strategies.EarlyMACD import EarlyMACD
 
+# Do not remove these imports even if PyCharm says they're unused
+from strategies.MACD import MACD
+from strategies.MACD_X import MACD_X
+from strategies.ScalpEmaRsiAdx import ScalpEmaRsiAdx
+from strategies.ScalpEmaRsiAdx_X import ScalpEmaRsiAdx_X
 
 # Ignore warnings when reading xlsx file containing list of values for dropdown
 from stats import stats_utils
-
 
 
 # Do not delete
@@ -24,7 +25,9 @@ from stats import stats_utils
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
-    print(f'============================================= TEST #{params["Test_Num"]} =============================================')
+    print(f'=============================================',
+          f'TEST #{params["Test_Num"]}',
+          '=============================================')
     execution_start = time.time()
     validate_params(params)
     strategy = globals()[params['Strategy']](params)

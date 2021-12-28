@@ -6,14 +6,13 @@ import talib
 
 import utils
 
-from strategies.IEarlyStrategy import IEarlyStrategy
+from strategies.BaseStrategy_X import BaseStrategy_X
 from strategies.MACD import MACD
 
 
 # We inherit from EarlyStrategy for the process_trades() method
 # We inherit from the parent strategy for the rest.
-class EarlyMACD(IEarlyStrategy, MACD):
-    NAME = 'Early MACD'
+class MACD_X(BaseStrategy_X, MACD):
 
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
@@ -30,18 +29,17 @@ class EarlyMACD(IEarlyStrategy, MACD):
 
     def __init__(self, params):
         MACD.__init__(self, params)
-        IEarlyStrategy.__init__(self, params)
+        BaseStrategy_X.__init__(self, params)
+        self.NAME = self.__class__.__name__.replace('_', ' ')
 
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
-    def find_exact_trade_entry(self, df, from_time, to_time, delta=0):
+    def find_exact_trade_entry(self, df, from_time, to_time, trade_type, delta=0):
         # We need to get an extra row to see the value at -1min in case the cross is on the first row
         to_time = to_time - dt.timedelta(minutes=1)
 
-        minutes_df = self.exchange.get_candle_data(0, self.params['Pair'], from_time, to_time, "1m", include_prior=0,
+        minutes_df = self.exchange.get_candle_data(self.params['Pair'], from_time, to_time, "1m", include_prior=0,
                                                    write_to_file=False, verbose=False)
-        # Used cached data (very slow)
-        # minutes_df = self.get_minutes_from_cached_file(from_time, to_time)
 
         # Only keep the close column
         # To remove warning use below syntax instead of: minutes_df = minutes_df[['close']]

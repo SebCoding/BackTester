@@ -8,7 +8,7 @@ from urllib3.exceptions import ReadTimeoutError
 
 import api_keys
 import utils
-from exchanges.IExchange import IExchange
+from exchanges.BaseExchange import BaseExchange
 from binance.client import Client
 from binance.enums import HistoricalKlinesType
 
@@ -16,7 +16,7 @@ from binance.enums import HistoricalKlinesType
 # Using: python-binance
 # https://python-binance.readthedocs.io/en/latest/index.html
 
-class Binance(IExchange):
+class Binance(BaseExchange):
     NAME = 'Binance'
 
     # Dictionary of pairs used by exchange to define intervals for candle data

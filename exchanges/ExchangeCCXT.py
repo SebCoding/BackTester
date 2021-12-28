@@ -1,11 +1,9 @@
 import datetime as dt
 from os.path import exists
 
-# Abstract Exchange Class
 import ccxt
 import pandas as pd
 
-import api_keys
 import config
 import utils
 
@@ -13,12 +11,7 @@ import utils
 class ExchangeCCXT:
     NAME = None
 
-    # Modify maker/taker fees here for the ByBit exchange
-    # Make sure these values are floats, use decimal notation with a dot
-    MAKER_FEE_PCT = -0.025
-    TAKER_FEE_PCT = 0.075
-
-    USE_TESTNET = False  # Boolean True/Falsee.
+    USE_TESTNET = False  # Boolean True/False.
 
     def __init__(self, name):
         super().__init__()
@@ -45,11 +38,12 @@ class ExchangeCCXT:
             self.exchange.set_sandbox_mode(False)
 
         self.exchange.options['defaultType'] = 'future'
+        # Does not seem to work, TODO: adjustForTimeDifference
         self.exchange.options['adjustForTimeDifference'] = False
         self.exchange.timeout = 30000  # number in milliseconds, default 10000
         self.exchange.load_markets()
 
-    def get_candle_data(self, test_num, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
+    def get_candle_data(self, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
         self.validate_pair(pair)
         self.validate_interval(interval)
@@ -180,24 +174,14 @@ class ExchangeCCXT:
             raise Exception(f'\nInvalid Interval [{interval}]. Expected values: {valid_intervals_str}')
 
     def validate_pair(self, pair):
-        # valid_pairs = self.markets_df['name'].tolist()
-        # valid_pairs_str = ' '
-        # valid_pairs_str = valid_pairs_str.join(valid_pairs)
-        # if pair not in valid_pairs:
-        #     raise Exception(f'Invalid pair [{pair}]. Expected list of values: {valid_pairs_str}')
-        pass
+        market = self.exchange.market(pair)
+        if market is None:
+            raise Exception(f'\nInvalid [{pair}] for exchange {self.NAME}.')
 
     def get_maker_fee(self, pair):
-        # self.validate_pair(pair)
-        # print(f'maker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "maker_fee"].iat[0]}')
-        # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'maker_fee'].iat[0])
         market = self.exchange.market(pair)
         return market['maker']
 
     def get_taker_fee(self, pair):
-        # self.validate_pair(pair)
-        # print(f'taker_fee: {self.markets_df.loc[self.markets_df["name"] == pair, "taker_fee"].iat[0]}')
-        # return float(self.markets_df.loc[self.markets_df['name'] == pair, 'taker_fee'].iat[0])
-        # return 0.00075
         market = self.exchange.market(pair)
         return market['taker']

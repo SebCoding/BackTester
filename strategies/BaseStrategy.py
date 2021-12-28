@@ -1,3 +1,7 @@
+"""
+    Base Abstract Strategy Class.
+    All strategies inherit from this class and must implement the abstract methods of this class
+"""
 import math
 from abc import ABC, abstractmethod
 
@@ -9,18 +13,12 @@ import utils
 from enums.TradeStatus import TradeStatuses
 from stats.Statistics import Statistics
 
-# Do not remove exchange imports
+# Do not remove these imports even if PyCharm says they're unused
 from exchanges.Binance import Binance
 from exchanges.ByBit import ByBit
-from exchanges.ByBit2 import ByBit2
-
-""" 
-    Base Abstract Strategy Class.
-    All strategies inherit from this class and must implement the abstract methods of this class
-"""
 
 
-class IStrategy(ABC):
+class BaseStrategy(ABC):
     NAME = 'abstract'
 
     # Ratio of the total account balance the bot is allowed to trade.
@@ -91,7 +89,6 @@ class IStrategy(ABC):
     # Step 0: Get candle data used to backtest the strategy
     def get_candle_data(self):
         self.df = self.exchange.get_candle_data(
-            self.params['Test_Num'],
             self.params['Pair'],
             self.params['From_Time'],
             self.params['To_Time'],
@@ -390,7 +387,7 @@ class IStrategy(ABC):
                 'SL %': self.params['Stop_Loss_PCT'],
                 'Maker Fee %': self.MAKER_FEE_PCT * 100,
                 'Taker Fee %': self.TAKER_FEE_PCT * 100,
-                'Strategy': self.params['Strategy'],
+                'Strategy': self.NAME,
 
                 'Wins': self.stats.nb_wins,
                 'Losses': self.stats.nb_losses,

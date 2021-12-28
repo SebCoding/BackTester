@@ -3,11 +3,10 @@ import datetime
 import talib
 
 from enums.TradeStatus import TradeStatuses
-from strategies.IStrategy import IStrategy
+from strategies.BaseStrategy import BaseStrategy
 
 
-class ScalpingEmaRsiAdx(IStrategy):
-    NAME = 'ScalpingEmaRsiAdx'
+class ScalpEmaRsiAdx(BaseStrategy):
 
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
@@ -42,6 +41,7 @@ class ScalpingEmaRsiAdx(IStrategy):
 
     def __init__(self, params):
         super().__init__(params)
+        self.NAME = self.__class__.__name__.replace('_', ' ')
 
     # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
@@ -97,7 +97,10 @@ class ScalpingEmaRsiAdx(IStrategy):
         low_col_index = self.df.columns.get_loc("low")
         signal_offset_col_index = self.df.columns.get_loc("signal_offset")
         trade_status_col_index = self.df.columns.get_loc("trade_status")
+        ema_col_index = self.df.columns.get_loc(self.ema_col_name)
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
+        adx_col_index = self.df.columns.get_loc(self.adx_col_name)
+
 
         # Index limit that can be used when the CONFIRMATION_FILTER is True
         i_max_condition_filter = len(self.df.index) - 1
@@ -118,9 +121,22 @@ class ScalpingEmaRsiAdx(IStrategy):
                 received_short_signal = True
                 signal_offset = i
 
-            cur_rsi = self.df.iloc[i, rsi_col_index]
             cur_high = self.df.iloc[i, high_col_index]
             cur_low = self.df.iloc[i, low_col_index]
+            cur_close = self.df.iloc[i, close_col_index]
+            cur_ema = self.df.iloc[i, ema_col_index]
+            cur_rsi = self.df.iloc[i, rsi_col_index]
+            cur_adx = self.df.iloc[i, adx_col_index]
+
+            # If after receiving a long signal the EMA or ADX are no longer satisfied, cancel signal
+            if received_long_signal and (cur_close < cur_ema or cur_adx < self.ADX_THRESHOLD):
+                received_long_signal = False
+                continue
+
+            # If after receiving a short signal the EMA or ADX are no longer satisfied, cancel signal
+            if received_short_signal and (cur_close > cur_ema or cur_adx < self.ADX_THRESHOLD):
+                received_short_signal = False
+                continue
 
             # RSI exiting oversold area. Long Entry
             if received_long_signal and cur_rsi > self.RSI_MIN_THRESHOLD_ENTRY:
@@ -174,7 +190,7 @@ class ScalpingEmaRsiAdx(IStrategy):
         self.df = self.df.round(decimals=2)
 
         # Remove rows with nulls entries for EMA
-        #self.df = self.df.dropna(subset=[self.ema_col_name])
+        self.df = self.df.dropna(subset=[self.ema_col_name])
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))

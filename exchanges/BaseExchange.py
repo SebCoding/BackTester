@@ -1,13 +1,16 @@
+"""
+    Base Abstract Exchange Class.
+    Exchange classes that do not use the ccxt library inherit from this class
+"""
 import math
 from abc import ABC, abstractmethod
 from os.path import exists
 
-# Abstract Exchange Class
 import config
 import utils
 
 
-class IExchange(ABC):
+class BaseExchange(ABC):
     NAME = 'abstract'
 
     # Dictionary of pairs used by exchange to define intervals for candle data
