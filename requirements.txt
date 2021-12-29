@@ -7,7 +7,7 @@ pandas
 pybit
 python_binance
 requests
+SQLAlchemy
+SQLAlchemy_Utils
 TA_Lib
 urllib3
-
-sqlalchemy
