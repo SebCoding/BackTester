@@ -7,6 +7,7 @@ import time
 import ccxt
 import pandas as pd
 
+import config
 import utils
 from database.BaseDbData import BaseDbData
 
@@ -38,6 +39,7 @@ class DbDataLoader(BaseDbData):
     def load_candle_data(self, pair, from_time, interval, verbose=False):
         self.validate_pair(pair)
         self.validate_interval(interval)
+        self.delete_all_pair_interval_data(pair, interval)
 
         table_name = self.get_table_name(pair, interval)
         start_time = from_time
@@ -57,10 +59,8 @@ class DbDataLoader(BaseDbData):
             )
             print('done.')
             df = pd.DataFrame(result, columns=['open_time', 'open', 'high', 'low', 'close', 'volume'])
-
             if df is None or (len(df.index) == 0):
                 break
-
             df.index = [dt.datetime.fromtimestamp(x / 1000) for x in df.open_time]
 
             # Set proper data types
@@ -81,8 +81,6 @@ class DbDataLoader(BaseDbData):
         # print(query)
         self.exec_sql_query(query)
 
-
-
     # delete all data in the database for this pair and this interval
     def delete_all_pair_interval_data(self, pair, interval):
         table_name = self.get_table_name(pair, interval)
@@ -93,10 +91,9 @@ class DbDataLoader(BaseDbData):
 
     def load_pair_data_all_timeframes(self, pair):
         execution_start = time.time()
-        # for interval in reversed(config.VALID_INTERVALS):
-        for interval in reversed('1m'):
+        for interval in reversed(config.VALID_INTERVALS):
+        # for interval in reversed('1m'):
             from_time = dt.datetime(2000, 1, 1)
-            self.delete_all_pair_interval_data(pair, interval)
             self.load_candle_data(pair, from_time, interval, True)
         exec_time = utils.format_execution_time(time.time() - execution_start)
         print(f'Load completed. Execution Time: {exec_time}\n')

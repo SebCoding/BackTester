@@ -3,17 +3,30 @@
 """
 
 import datetime as dt
+import time
+
+import utils
 from database.DbDataLoader import DbDataLoader
 
 # Example1: load pair data for 1 timeframe
-loader = DbDataLoader('Bybit')
-from_time = dt.datetime(2010, 1, 1)
-loader.load_candle_data('BTCUSDT', from_time, '1m', True)
+# pair = 'BTCUSDT'
+# loader = DbDataLoader('Bybit')
+# from_time = dt.datetime(2010, 1, 1)
+# interval = '1m'
+#
+# execution_start = time.time()
+# loader.load_candle_data(pair, from_time, interval, True)
+# exec_time = utils.format_execution_time(time.time() - execution_start)
+# print(f'Load completed. Execution Time: {exec_time}\n')
+
 
 # Example2: load pair data for all timeframes
-# loader = DataLoader('Binance')
-# loader.load_pair_data_all_timeframes('BTCUSDT')
+# pair = 'ETHUSDT'
+# loader = DbDataLoader('Binance')
+# loader.load_pair_data_all_timeframes(pair)
+
 
 # Example3: load pair data for all timeframes
-# loader = DataLoader('Bybit')
-# loader.load_pair_data_all_timeframes('BTCUSDT')
+# pair = 'ETHUSDT'
+# loader = DbDataLoader('Bybit')
+# loader.load_pair_data_all_timeframes(pair)
