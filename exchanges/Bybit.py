@@ -14,10 +14,10 @@ import utils
 from exchanges.BaseExchange import BaseExchange
 
 
-class ByBit(BaseExchange):
-    NAME = 'ByBit'
+class Bybit(BaseExchange):
+    NAME = 'Bybit'
 
-    # Modify maker/taker fees here for the ByBit exchange
+    # Modify maker/taker fees here for the Bybit exchange
     # Make sure these values are floats, use decimal notation with a dot
     MAKER_FEE_PCT = -0.025
     TAKER_FEE_PCT = 0.075
@@ -127,7 +127,7 @@ class ByBit(BaseExchange):
                       f'Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
-        # The issue with ByBit API is that you can get a maximum of 200 bars from it.
+        # The issue with Bybit API is that you can get a maximum of 200 bars from it.
         # So if you need to get data for a large portion of the time you have to call it multiple times.
 
         if verbose:
@@ -188,10 +188,3 @@ class ByBit(BaseExchange):
             self.save_candle_data(pair, from_time, to_time, interval, df, prior=include_prior,
                                   include_time=True if interval == '1' else False, verbose=False)
         return df
-
-
-# Testing Class
-# ex = ExchangeByBit()
-# from_time = pd.Timestamp(year=2021, month=10, day=1)
-# to_time = pd.Timestamp(year=2021, month=12, day=31)
-# ex.get_candle_data(0, 'BTCUSDT', from_time, to_time, "60", include_prior=0, write_to_file=True, verbose=True)

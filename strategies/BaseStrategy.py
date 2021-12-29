@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
+import config
+from database.DbDataReader import DbDataReader
 from exchanges.ExchangeCCXT import ExchangeCCXT
 from stats import stats_utils
 import utils
@@ -15,7 +17,7 @@ from stats.Statistics import Statistics
 
 # Do not remove these imports even if PyCharm says they're unused
 from exchanges.Binance import Binance
-from exchanges.ByBit import ByBit
+from exchanges.Bybit import Bybit
 
 
 class BaseStrategy(ABC):
@@ -44,6 +46,8 @@ class BaseStrategy(ABC):
         self.MAKER_FEE_PCT = self.exchange.get_maker_fee(params['Pair'])
         self.TAKER_FEE_PCT = self.exchange.get_taker_fee(params['Pair'])
         self.stats = Statistics()
+        if config.HISTORICAL_DATA_STORED_IN_DB:
+            self.db_reader = DbDataReader(self.exchange.NAME)
 
     def run(self):
         self.get_candle_data()  # Step 0
@@ -88,21 +92,35 @@ class BaseStrategy(ABC):
 
     # Step 0: Get candle data used to backtest the strategy
     def get_candle_data(self):
-        self.df = self.exchange.get_candle_data(
-            self.params['Pair'],
-            self.params['From_Time'],
-            self.params['To_Time'],
-            self.params['Interval'],
-            include_prior=self.MIN_DATA_SIZE,
-            write_to_file=True,
-            verbose=True)
-        if self.df is None:
-            print(f'\nNo data was returned from {self.exchange.NAME}. Unable to backtest strategy.')
-            raise Exception(f"No data returned by {self.exchange.NAME}")
-        elif len(self.df) <= self.MIN_DATA_SIZE:
-            print(
-                f'\nData rows = {len(self.df)}, less than MIN_DATA_SIZE={self.MIN_DATA_SIZE}. Unable to backtest strategy.')
-            raise Exception("Unable to Run Strategy on Data Set")
+        if config.HISTORICAL_DATA_STORED_IN_DB:
+            self.df = self.db_reader.get_candle_data(
+                self.params['Pair'],
+                self.params['From_Time'],
+                self.params['To_Time'],
+                self.params['Interval'],
+                include_prior=self.MIN_DATA_SIZE,
+                verbose=True)
+            if self.df is None:
+                raise Exception(f"No data returned by the database. Unable to backtest strategy.")
+            elif len(self.df) <= self.MIN_DATA_SIZE:
+                print(
+                    f'\nData rows = {len(self.df)}, less than MIN_DATA_SIZE={self.MIN_DATA_SIZE}. Unable to backtest strategy.')
+                raise Exception("Unable to Run Strategy on Data Set")
+        else:
+            self.df = self.exchange.get_candle_data(
+                self.params['Pair'],
+                self.params['From_Time'],
+                self.params['To_Time'],
+                self.params['Interval'],
+                include_prior=self.MIN_DATA_SIZE,
+                write_to_file=True,
+                verbose=True)
+            if self.df is None:
+                raise Exception(f"No data returned by {self.exchange.NAME}. Unable to backtest strategy.")
+            elif len(self.df) <= self.MIN_DATA_SIZE:
+                print(
+                    f'\nData rows = {len(self.df)}, less than MIN_DATA_SIZE={self.MIN_DATA_SIZE}. Unable to backtest strategy.')
+                raise Exception("Unable to Run Strategy on Data Set")
 
     # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):

@@ -201,8 +201,7 @@ class BaseStrategy_X(BaseStrategy):
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
                 entry_time, entry_price = \
-                    self.find_exact_trade_entry(self.df[['high', 'low', 'close']].iloc[0:i], start_time, end_time,
-                                                TradeTypes.Short)
+                    self.find_exact_trade_entry(self.df[['high', 'low', 'close']].iloc[0:i], start_time, end_time, TradeTypes.Short)
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
                 # print(f'entry_time[{entry_time}], entry_price[{entry_price}]')

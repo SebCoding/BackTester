@@ -166,7 +166,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
                     received_short_signal = False
 
     # Check if there is a trade exit between current trade potential entry and signal that generated it.
-    # If yes, that means this trade entry has been generated based a signal that happened during another
+    # If yes, that means this trade entry has been generated based on a signal that happened during another
     # trade and must be ignored
     def entry_is_valid(self, current_index):
         signal_offset_col_index = self.df.columns.get_loc("signal_offset")

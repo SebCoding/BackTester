@@ -14,9 +14,8 @@ class ExchangeCCXT:
     USE_TESTNET = False  # Boolean True/False.
 
     def __init__(self, name):
-        super().__init__()
-        self.NAME = name.capitalize()
         self.exchange = getattr(ccxt, name)()
+        self.NAME = self.exchange.name
 
         # exchange_id = name
         # exchange_class = getattr(ccxt, exchange_id)
@@ -40,7 +39,7 @@ class ExchangeCCXT:
         self.exchange.options['defaultType'] = 'future'
         # Does not seem to work, TODO: adjustForTimeDifference
         self.exchange.options['adjustForTimeDifference'] = False
-        self.exchange.timeout = 30000  # number in milliseconds, default 10000
+        self.exchange.timeout = 300000  # number in milliseconds, default 10000
         self.exchange.load_markets()
 
     def get_candle_data(self, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
@@ -59,7 +58,7 @@ class ExchangeCCXT:
                       f'Interval [{interval}], From[{from_time_str}], To[{to_time_str}]')
             return cached_df
 
-        # The issue with ByBit API is that you can get a maximum of 200 bars from it.
+        # The issue with Bybit API is that you can get a maximum of 200 bars from it.
         # So if you need to get data for a large portion of the time you have to call it multiple times.
 
         if verbose:
@@ -69,7 +68,7 @@ class ExchangeCCXT:
         df_list = []
         start_time = from_time
 
-        # Adjust from_time for example to add 200 additional prior entries for ema200
+        # Adjust from_time for example to add 200 additional prior entries for example ema200
         if include_prior > 0:
             start_time = utils.adjust_from_time(from_time, interval, include_prior)
 
@@ -83,6 +82,7 @@ class ExchangeCCXT:
                 since=int(last_datetime_stamp)
             )
             tmp_df = pd.DataFrame(result, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+
             # Add pair column
             tmp_df['pair'] = pair
 
@@ -91,9 +91,7 @@ class ExchangeCCXT:
 
             tmp_df.index = [dt.datetime.fromtimestamp(x / 1000) for x in tmp_df.timestamp]
             df_list.append(tmp_df)
-            last_datetime_stamp = float(max(tmp_df.timestamp) + 1)  # Add 1 sec to last data received
-
-            # time.sleep(2) # Sleep for x seconds, to avoid being locked out
+            last_datetime_stamp = float(max(tmp_df.timestamp) + 1000)  # Add (1000ms = 1 sec) to last data received
 
         if df_list is None or len(df_list) == 0:
             return None

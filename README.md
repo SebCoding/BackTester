@@ -1,7 +1,7 @@
 ![Image](images/trading.jpg "")
 
 # Back Testing Trading Strategies
-Python code that pulls data from ByBit and automates the back testing of a number of trading strategy.
+Python code that pulls data from Bybit and automates the back testing of a number of trading strategy.
 
 The application takes as input an [Excel file](TestCases.xlsx) with the parameters for each test case. 
 

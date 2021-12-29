@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import talib
 
+import config
 import utils
 
 from strategies.BaseStrategy_X import BaseStrategy_X
@@ -38,8 +39,23 @@ class MACD_X(BaseStrategy_X, MACD):
         # We need to get an extra row to see the value at -1min in case the cross is on the first row
         to_time = to_time - dt.timedelta(minutes=1)
 
-        minutes_df = self.exchange.get_candle_data(self.params['Pair'], from_time, to_time, "1m", include_prior=0,
-                                                   write_to_file=False, verbose=False)
+        if config.HISTORICAL_DATA_STORED_IN_DB:
+            minutes_df = self.db_reader.get_candle_data(
+                self.params['Pair'],
+                from_time,
+                to_time,
+                "1m",
+                include_prior=0,
+                verbose=False)
+        else:
+            minutes_df = self.exchange.get_candle_data(
+                self.params['Pair'],
+                from_time,
+                to_time,
+                "1m",
+                include_prior=0,
+                write_to_file=False,
+                verbose=False)
 
         # Only keep the close column
         # To remove warning use below syntax instead of: minutes_df = minutes_df[['close']]

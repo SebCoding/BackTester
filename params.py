@@ -27,7 +27,7 @@ def print_parameters(params, all=False):
 
 
 def validate_params(params):
-    if params['Exchange'].lower() not in config.SUPPORTED_EXCHANGES:
+    if params['Exchange'].lower() not in [x.lower() for x in config.SUPPORTED_EXCHANGES]:
         raise Exception(f'Unsupported Exchange = [{params["Exchange"]}].')
 
     if not isinstance(params['From_Time'], dt.datetime):
