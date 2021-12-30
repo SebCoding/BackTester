@@ -81,6 +81,10 @@ class BaseStrategy(ABC):
         pass
 
     def get_entry_fee(self, trade_amount):
+        # Uncomment/Comment one of the lines below to change
+        # if trades are entered in maker/taker order
+        
+        # return float(trade_amount) * self.TAKER_FEE_PCT
         return float(trade_amount) * self.MAKER_FEE_PCT
 
     def get_take_profit_fee(self, trade_amount):
