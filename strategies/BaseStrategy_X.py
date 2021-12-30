@@ -36,6 +36,7 @@ class BaseStrategy_X(BaseStrategy):
         trade_status = ''
 
         print(f'Processing trades using the [{self.NAME}] strategy')
+        print(self.get_strategy_text_details())
 
         # Add and Initialize new columns
         self.df['wallet'] = 0.0
