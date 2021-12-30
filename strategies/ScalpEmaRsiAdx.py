@@ -17,12 +17,12 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 3
-    RSI_MIN_THRESHOLD = 20
-    RSI_MAX_THRESHOLD = 80
+    RSI_MIN_SIGNAL_THRESHOLD = 20
+    RSI_MAX_SIGNAL_THRESHOLD = 80
 
     # Trade entry RSI thresholds (by default equal to RSI min/max thresholds)
-    RSI_MIN_THRESHOLD_ENTRY = 20
-    RSI_MAX_THRESHOLD_ENTRY = 80
+    RSI_MIN_ENTRY_THRESHOLD = 20
+    RSI_MAX_ENTRY_THRESHOLD = 80
 
     # Volatility indicator: ADX - Average Directional Index
     ADX_PERIODS = 5
@@ -42,6 +42,13 @@ class ScalpEmaRsiAdx(BaseStrategy):
     def __init__(self, params):
         super().__init__(params)
         self.NAME = self.__class__.__name__
+
+    def get_strategy_text_details(self):
+        details = f'EMA({self.EMA_PERIODS}), RSI({self.RSI_PERIODS}), ' \
+                  f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
+                  f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
+                  f'ADX({self.ADX_PERIODS})'
+        return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
@@ -72,7 +79,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         self.df.loc[
             (
                     (self.df['close'] > self.df[self.ema_col_name]) &  # price > EMA
-                    (self.df[self.rsi_col_name] < self.RSI_MIN_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
+                    (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = 1
@@ -81,7 +88,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         self.df.loc[
             (
                     (self.df['close'] < self.df[self.ema_col_name]) &  # price < EMA-50
-                    (self.df[self.rsi_col_name] > self.RSI_MAX_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                    (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
@@ -139,7 +146,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
                 continue
 
             # RSI exiting oversold area. Long Entry
-            if received_long_signal and cur_rsi > self.RSI_MIN_THRESHOLD_ENTRY:
+            if received_long_signal and cur_rsi > self.RSI_MIN_ENTRY_THRESHOLD:
                 if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
                     # Next candle must close higher than high of current
                     next_close = self.df.iloc[i + 1, close_col_index]
@@ -152,7 +159,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
                     self.df.iloc[i, signal_offset_col_index] = signal_offset - i
                     received_long_signal = False
             # RSI exiting overbought area. Short Entry
-            elif received_short_signal and cur_rsi < self.RSI_MAX_THRESHOLD_ENTRY:
+            elif received_short_signal and cur_rsi < self.RSI_MAX_ENTRY_THRESHOLD:
                 if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
                     # Next candle must close lower than low of current
                     next_close = self.df.iloc[i + 1, close_col_index]

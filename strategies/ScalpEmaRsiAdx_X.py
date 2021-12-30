@@ -21,19 +21,20 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
     TRADABLE_BALANCE_RATIO = 1.0
 
     # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 50
+    EMA_PERIODS = 40
 
     # Momentum indicator: RSI - Relative Strength Index
-    RSI_PERIODS = 3
-    RSI_MIN_THRESHOLD = 20
-    RSI_MAX_THRESHOLD = 80
+    RSI_PERIODS = 2
+    RSI_MIN_SIGNAL_THRESHOLD = 19
+    RSI_MAX_SIGNAL_THRESHOLD = 81
 
-    # Trade entry RSI thresholds (by default equal to RSI min/max thresholds)
-    RSI_MIN_THRESHOLD_ENTRY = 20
-    RSI_MAX_THRESHOLD_ENTRY = 80
+    # Trade entry RSI thresholds
+    # (by default equal to RSI signal min/max thresholds)
+    RSI_MIN_ENTRY_THRESHOLD = 30
+    RSI_MAX_ENTRY_THRESHOLD = 70
 
     # Volatility indicator: ADX - Average Directional Index
-    ADX_PERIODS = 5
+    ADX_PERIODS = 3
     ADX_THRESHOLD = 30
 
     # Additional filter: wait an extra candle to confirm the direction of the trend
@@ -109,7 +110,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
                 df2.loc[
                     (
                             (df2['close'] > df2[self.ema_col_name]) &  # price > EMA
-                            (df2[self.rsi_col_name] > self.RSI_MIN_THRESHOLD) &  # RSI > RSI_MIN_THRESHOLD
+                            (df2[self.rsi_col_name] > self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI > RSI_MIN_THRESHOLD
                             (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
                     ),
                     'enter'] = 1
@@ -119,7 +120,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
                 df2.loc[
                     (
                             (df2['close'] < df2[self.ema_col_name]) &  # price < EMA-50
-                            (df2[self.rsi_col_name] < self.RSI_MAX_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                            (df2[self.rsi_col_name] < self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
                             (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
                     ),
                     'enter'] = -1

@@ -72,6 +72,12 @@ class BaseStrategy(ABC):
     def clean_df_prior_to_saving(self):
         pass
 
+    # For Statistics return a line of text that describes indicator details used
+    # to generate these results
+    @abstractmethod
+    def get_strategy_text_details(self):
+        pass
+
     def get_entry_fee(self, trade_amount):
         return float(trade_amount) * self.MAKER_FEE_PCT
 
@@ -416,10 +422,12 @@ class BaseStrategy(ABC):
                 'Wins $': f'{self.stats.total_wins:,.2f}',
                 'Losses $': f'{self.stats.total_losses:,.2f}',
                 'Fees $': f'{self.stats.total_fees_paid:,.2f}',
-                'Total P/L': f'{self.stats.total_pl:,.2f}'
+                'Total P/L': f'{self.stats.total_pl:,.2f}',
+                'Details': self.get_strategy_text_details()
             },
             ignore_index=True,
         )
+
 
     # Call this method each time a processed to update progress on console
     def update_progress_dots(self):

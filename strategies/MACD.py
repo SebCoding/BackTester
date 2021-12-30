@@ -30,6 +30,12 @@ class MACD(BaseStrategy):
         super().__init__(params)
         self.NAME = self.__class__.__name__
 
+    def get_strategy_text_details(self):
+        details = f'EMA({self.EMA_PERIODS}), MACD(fast={self.MACD_FAST_PERIOD}, ' \
+                  f'slow={self.MACD_SLOW_PERIOD}, signal={self.MACD_SIGNAL_PERIOD})'
+
+        return details
+
     # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
         print('Adding indicators and signals to data.')

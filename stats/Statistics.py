@@ -21,6 +21,8 @@ class Statistics:
         self.total_losses = float(0)
         self.total_fees_paid = float(0)
 
+        self.details = None
+
     def get_total_trades(self):
         return self.nb_wins + self.nb_losses
 
@@ -59,4 +61,6 @@ class Statistics:
         print(f'Total Losses: {locale.currency(self.total_losses, grouping=True)}')
         print(f'Total Fees Paid: {locale.currency(self.total_fees_paid, grouping=True)}')
         print(f'Total P/L: {locale.currency(self.total_pl, grouping=True)}\n')
+        print('-------------------------------------------------------')
+        print(self.details)
         print('-------------------------------------------------------')

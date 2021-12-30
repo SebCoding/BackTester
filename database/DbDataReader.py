@@ -32,11 +32,11 @@ class DbDataReader(BaseDbData):
         if verbose:
             print(f'Fetching {self.db_name}[{pair}] data from database. Interval [{interval}],',
                   f' From[{from_time_str}], To[{to_time_str}]')
-            print(query)
+            # print(query)
 
         # Load data into the DataFrame using the read_sql() method from pandas
         data_df = pd.read_sql(query, self.engine)
         data_df.set_index(['index'], inplace=True)
-        print(data_df.tail().to_string())
+        # print(data_df.tail().to_string())
         # exit(0)
         return data_df

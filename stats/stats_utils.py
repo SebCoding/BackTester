@@ -99,7 +99,8 @@ def get_initial_statistics_df():
         'Wins $',
         'Losses $',
         'Fees $',
-        'Total P/L'
+        'Total P/L',
+        'Details'
     ])
     # print(results_df.to_string())
     return statistics_df
