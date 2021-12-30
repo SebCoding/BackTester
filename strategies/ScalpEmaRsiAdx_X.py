@@ -56,7 +56,9 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
     # This needs to be redefined in subclasses otherwise return 0 and always sends
     # to find_exact_trade_entry() the entire dataframe
     def get_start_index(self, end_index):
-        return end_index - (self.ACCURATE_EMA_FACTOR * self.EMA_PERIODS)
+        # Not supposed to change the results, but it does not sure why. Should not be used atm
+        # return end_index - (self.ACCURATE_EMA_FACTOR * self.EMA_PERIODS)
+        return 0
 
     # Find with a minute precision the first point where we should enter the trade
     # and return the time and closing price for that point in time + delta minutes

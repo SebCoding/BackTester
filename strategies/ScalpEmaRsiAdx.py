@@ -44,10 +44,14 @@ class ScalpEmaRsiAdx(BaseStrategy):
         self.NAME = self.__class__.__name__
 
     def get_strategy_text_details(self):
+        if self.CONFIRMATION_FILTER:
+            condition_filter = 'on'
+        else:
+            condition_filter = 'off'
         details = f'EMA({self.EMA_PERIODS}), RSI({self.RSI_PERIODS}), ' \
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
-                  f'ADX({self.ADX_PERIODS})'
+                  f'ADX({self.ADX_PERIODS}, Filter({condition_filter}))'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
