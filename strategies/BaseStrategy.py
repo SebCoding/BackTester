@@ -4,7 +4,8 @@
 """
 import math
 from abc import ABC, abstractmethod
-
+import datetime as dt
+from datetime import datetime
 import pandas as pd
 
 import config
@@ -48,6 +49,7 @@ class BaseStrategy(ABC):
         self.stats = Statistics()
         if config.HISTORICAL_DATA_STORED_IN_DB:
             self.db_reader = DbDataReader(self.exchange.NAME)
+            self.db_engine = self.db_reader.engine
 
     def run(self):
         self.get_candle_data()  # Step 0
@@ -427,7 +429,20 @@ class BaseStrategy(ABC):
             },
             ignore_index=True,
         )
+        if config.HISTORICAL_DATA_STORED_IN_DB:
+            self.save_stats_to_db()
 
+    def save_stats_to_db(self):
+        table_name = 'Test_Results_Statistics'
+        stats_df = self.params['Statistics'].iloc[[-1]]
+        now = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S') # Get current no milliseconds
+        now = datetime.strptime(now, '%Y-%m-%d %H:%M:%S') # convert str back to datetime
+
+        # Use: (df.loc[:,'New_Column']='value') or (df = df.assign(New_Column='value'))
+        # instead of: df['New_Column']='value' <-- Generates warnings
+        stats_df = stats_df.assign(Timestamp=now)
+        stats_df.set_index('Timestamp', inplace=True)
+        stats_df.to_sql(table_name, self.db_engine, index=True, if_exists='append')
 
     # Call this method each time a processed to update progress on console
     def update_progress_dots(self):
