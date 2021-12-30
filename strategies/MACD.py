@@ -32,7 +32,8 @@ class MACD(BaseStrategy):
 
     def get_strategy_text_details(self):
         details = f'EMA({self.EMA_PERIODS}), MACD(fast={self.MACD_FAST_PERIOD}, ' \
-                  f'slow={self.MACD_SLOW_PERIOD}, signal={self.MACD_SIGNAL_PERIOD})'
+                  f'slow={self.MACD_SLOW_PERIOD}, signal={self.MACD_SIGNAL_PERIOD}), ' \
+                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER})'
 
         return details
 

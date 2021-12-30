@@ -51,7 +51,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         details = f'EMA({self.EMA_PERIODS}), RSI({self.RSI_PERIODS}), ' \
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
-                  f'ADX({self.ADX_PERIODS}), Filter({condition_filter})'
+                  f'ADX({self.ADX_PERIODS}), Filter({condition_filter}), ENTRY_AS_MAKER({self.ENTRY_AS_MAKER})'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals

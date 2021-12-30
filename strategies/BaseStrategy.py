@@ -29,7 +29,7 @@ class BaseStrategy(ABC):
     TRADABLE_BALANCE_RATIO = 0.0
 
     # Are we entering trades as maker (True) or as taker (False)
-    ENTRY_AS_MAKER = False
+    ENTRY_AS_MAKER = True
 
     # Used to output on console a dot for each trade processed.
     # Used as limited output progress bar
