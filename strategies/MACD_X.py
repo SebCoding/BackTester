@@ -15,6 +15,12 @@ from strategies.MACD import MACD
 # We inherit from the parent strategy for the rest.
 class MACD_X(BaseStrategy_X, MACD):
 
+    # According to the tests we did in the database/TestEMA.py file, we have determined
+    # that it is only necessary to use (10 x Y) rows of prior data to calculate an accurate value
+    # for an EMA_Y. For example: to calculate an accurate EMA200, using 2000 rows is enough.
+    # ** To be safe for other future unknown indicators we will use 15 instead of 10 **
+    ACCURATE_EMA_FACTOR = 15
+
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 1.0
@@ -32,6 +38,14 @@ class MACD_X(BaseStrategy_X, MACD):
         MACD.__init__(self, params)
         BaseStrategy_X.__init__(self, params)
         self.NAME = self.__class__.__name__
+        self.ema_min_rows = self.EMA_PERIODS * self.ACCURATE_EMA_FACTOR
+
+    # When we pass a dataframe to the find_exact_trade_entry() we only need to pass
+    # from this index to the current position to get accurate results.
+    # This needs to be redefined in subclasses otherwise return 0 and always sends
+    # to find_exact_trade_entry() the entire dataframe
+    def get_start_index(self, end_index):
+        return end_index - (self.ACCURATE_EMA_FACTOR * self.EMA_PERIODS)
 
     # Find with a minute precision the first point where macd crossed macdsignal
     # and return the time and closing price for that point in time + delta minutes
