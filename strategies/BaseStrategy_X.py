@@ -327,6 +327,7 @@ class BaseStrategy_X(BaseStrategy):
 
             if account_balance < 0:
                 print(f"\nWARNING: ********* Account balance is below zero. balance = {account_balance} *********")
+                exit(1)
 
         print()  # Jump to next line
         return self.df

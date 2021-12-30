@@ -28,6 +28,9 @@ class BaseStrategy(ABC):
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 0.0
 
+    # Are we entering trades as maker (True) or as taker (False)
+    ENTRY_AS_MAKER = False
+
     # Used to output on console a dot for each trade processed.
     # Used as limited output progress bar
     USE_DOT_PROGRESS_OUTPUT = True
@@ -81,11 +84,10 @@ class BaseStrategy(ABC):
         pass
 
     def get_entry_fee(self, trade_amount):
-        # Uncomment/Comment one of the lines below to change
-        # if trades are entered in maker/taker order
-        
-        # return float(trade_amount) * self.TAKER_FEE_PCT
-        return float(trade_amount) * self.MAKER_FEE_PCT
+        if self.ENTRY_AS_MAKER:
+            return float(trade_amount) * self.MAKER_FEE_PCT
+        else:
+            return float(trade_amount) * self.TAKER_FEE_PCT
 
     def get_take_profit_fee(self, trade_amount):
         return float(trade_amount) * self.MAKER_FEE_PCT
@@ -95,10 +97,14 @@ class BaseStrategy(ABC):
 
     def get_stake_and_entry_fee(self, amount):
         staked_amount = amount * self.TRADABLE_BALANCE_RATIO
-        if self.MAKER_FEE_PCT > 0:
-            staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
-            entry_fee = self.get_entry_fee(staked_amount)
+        if self.ENTRY_AS_MAKER:
+            if self.ENTRY_AS_MAKER and self.MAKER_FEE_PCT > 0:
+                staked_amount = math.floor(staked_amount / (1 + self.MAKER_FEE_PCT))
+                entry_fee = self.get_entry_fee(staked_amount)
+            else:
+                entry_fee = self.get_entry_fee(staked_amount)
         else:
+            staked_amount = math.floor(staked_amount / (1 + self.TAKER_FEE_PCT))
             entry_fee = self.get_entry_fee(staked_amount)
         return staked_amount, entry_fee
 
