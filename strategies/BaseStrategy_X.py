@@ -24,13 +24,6 @@ class BaseStrategy_X(BaseStrategy):
     def find_exact_trade_entry(self, df, from_time, to_time, trade_type, delta=0):
         pass
 
-    # When we pass a dataframe to the find_exact_trade_entry() we only need to pass
-    # from this index to the current position to get accurate results.
-    # This needs to be redefined in subclasses otherwise return 0 and always sends
-    # to find_exact_trade_entry() the entire dataframe
-    def get_start_index(self, end_index):
-        return 0
-
     # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics
     # We overwrite the process_trades() method from the IStrategy class for minute precision crossing
     def process_trades(self):
@@ -84,7 +77,7 @@ class BaseStrategy_X(BaseStrategy):
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
                 entry_time, entry_price = self.find_exact_trade_entry(
-                    self.df[['high', 'low', 'close']].iloc[self.get_start_index(i):i],
+                    self.df[['high', 'low', 'close']].iloc[0:i],
                     start_time,
                     end_time,
                     TradeTypes.Long
@@ -212,7 +205,7 @@ class BaseStrategy_X(BaseStrategy):
                 start_time = utils.idx2datetime(self.df.index.values[i])
                 end_time = start_time + dt.timedelta(minutes=interval)
                 entry_time, entry_price = self.find_exact_trade_entry(
-                    self.df[['high', 'low', 'close']].iloc[self.get_start_index(i):i],
+                    self.df[['high', 'low', 'close']].iloc[0:i],
                     start_time,
                     end_time,
                     TradeTypes.Short

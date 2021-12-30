@@ -45,9 +45,9 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     def get_strategy_text_details(self):
         if self.CONFIRMATION_FILTER:
-            condition_filter = 'on'
+            condition_filter = 'ON'
         else:
-            condition_filter = 'off'
+            condition_filter = 'OFF'
         details = f'EMA({self.EMA_PERIODS}), RSI({self.RSI_PERIODS}), ' \
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
