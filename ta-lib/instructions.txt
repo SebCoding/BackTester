@@ -1,0 +1,7 @@
+# Method 1
+# You can install the TA_Lib-0.4.22-cp310-cp310-win_amd64.whl file 
+# found in this folder using:
+pip install TA_Lib-0.4.22-cp310-cp310-win_amd64.whl
+
+# Method 2 
+conda install -c conda-forge ta-lib

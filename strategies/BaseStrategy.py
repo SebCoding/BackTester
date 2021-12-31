@@ -149,7 +149,7 @@ class BaseStrategy(ABC):
         take_profit = 0.0
         trade_status = ''
 
-        print(f'Processing trades using the [{self.NAME}] strategy')
+        print(f'Processing trades using the [{self.NAME}] strategy.')
         print(self.get_strategy_text_details())
 
         # Add and Initialize new columns

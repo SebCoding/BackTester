@@ -9,5 +9,10 @@ python_binance
 requests
 SQLAlchemy
 SQLAlchemy_Utils
-TA_Lib
 urllib3
+psycopg2
+tabulate
+ta-lib
+
+
+

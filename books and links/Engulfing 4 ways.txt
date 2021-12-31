@@ -1,0 +1,8 @@
+Dans la stratégie du engulfing candle, il y a 4 catégories.
+
+1-Engulfing candle.
+2-Engulfing candle including wick.
+3-Engulfing candle après 3 candles opposées.
+4-Engulfing candle including wick après 3 candles opposées.
+
+Le numéro 1 aura le plus de cas mais la moins bonne réussite tandis que le numéro 4 aura le moins de cas et la meilleure réussite.
