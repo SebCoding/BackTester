@@ -11,7 +11,7 @@ HISTORICAL_DATA_STORED_IN_DB = True
 
 # File Formats
 SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
-OUTPUT_FILE_FORMAT = ['xslx']  # Preferred format(s) for the output: csv, xlsx or both. Ex: ['csv', 'xlsx']
+OUTPUT_FILE_FORMAT = ['xlsx']  # Preferred format(s) for the output: csv, xlsx or both. Ex: ['csv', 'xlsx']
 
 # Exchanges
 SUPPORTED_EXCHANGES = ['Binance', 'Bybit']
