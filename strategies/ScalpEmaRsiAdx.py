@@ -86,18 +86,18 @@ class ScalpEmaRsiAdx(BaseStrategy):
         # Mark long signals
         self.df.loc[
             (
-                    (self.df['close'] > (self.df[self.ema_col_name] - self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price > EMA
-                    (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
-                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
+                (self.df['close'] > (self.df[self.ema_col_name] - self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price > EMA
+                (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
+                (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = 1
 
         # Mark short signals
         self.df.loc[
             (
-                    (self.df['close'] < (self.df[self.ema_col_name] - self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price < EMA-50
-                    (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
-                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
+                (self.df['close'] < (self.df[self.ema_col_name] + self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price < EMA-50
+                (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
 
