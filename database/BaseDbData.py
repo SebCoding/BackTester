@@ -2,7 +2,7 @@ import sqlalchemy
 from sqlalchemy_utils import database_exists
 
 class BaseDbData:
-    DB_URL = 'postgresql://postgres:postgres@localhost:5432/<db_name>'
+    DB_URL = 'postgresql://CryptoMakerUser:XF4BruF,fxnWUcs@localhost:5432/<db_name>'
 
     def __init__(self, exchange_name):
         # Database

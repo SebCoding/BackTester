@@ -22,10 +22,8 @@ def adjust_from_time(from_time, interval, include_prior):
         interval = interval.replace('h', '')
         from_time = from_time - timedelta(hours=int(interval) * delta)
     elif 'd' in interval:
-        interval = interval.replace('d', '')
         from_time = from_time - timedelta(days=delta)
     elif 'w' in interval:
-        interval = interval.replace('w', '')
         from_time = from_time - timedelta(weeks=delta)
     return from_time
 

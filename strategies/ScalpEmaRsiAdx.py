@@ -15,6 +15,10 @@ class ScalpEmaRsiAdx(BaseStrategy):
     # Trend indicator: EMA - Exponential Moving Average
     EMA_PERIODS = 50
 
+    # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
+    # Value should be between 0 and 1
+    EMA_TOLERANCE = 0.05
+
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 3
     RSI_MIN_SIGNAL_THRESHOLD = 20
@@ -48,7 +52,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
             condition_filter = 'On'
         else:
             condition_filter = 'Off'
-        details = f'EMA({self.EMA_PERIODS}), RSI({self.RSI_PERIODS}), ' \
+        details = f'EMA({self.EMA_PERIODS}), EMA_TOLERANCE({self.EMA_TOLERANCE}), RSI({self.RSI_PERIODS}), ' \
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
                   f'ADX({self.ADX_PERIODS}), Filter({condition_filter}), ENTRY_AS_MAKER({self.ENTRY_AS_MAKER})'
@@ -82,7 +86,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         # Mark long signals
         self.df.loc[
             (
-                    (self.df['close'] > self.df[self.ema_col_name]) &  # price > EMA
+                    (self.df['close'] > (self.df[self.ema_col_name] - self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price > EMA
                     (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
@@ -91,7 +95,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         # Mark short signals
         self.df.loc[
             (
-                    (self.df['close'] < self.df[self.ema_col_name]) &  # price < EMA-50
+                    (self.df['close'] < (self.df[self.ema_col_name] - self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price < EMA-50
                     (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
                     (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),

@@ -23,6 +23,10 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
     # Trend indicator: EMA - Exponential Moving Average
     EMA_PERIODS = 40
 
+    # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
+    # Value should be between 0 and 1
+    EMA_TOLERANCE = 0.05
+
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 2
     RSI_MIN_SIGNAL_THRESHOLD = 19

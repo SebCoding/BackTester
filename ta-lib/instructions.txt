@@ -1,7 +1,15 @@
 # Method 1
 # You can install the TA_Lib-0.4.22-cp310-cp310-win_amd64.whl file 
 # found in this folder using:
+
+# For Python 3.9
+pip install TA_Lib-0.4.22-cp39-cp39-win_amd64.whl
+
+# For Python 3.10
 pip install TA_Lib-0.4.22-cp310-cp310-win_amd64.whl
 
 # Method 2 
 conda install -c conda-forge ta-lib
+
+# Download ta-lib whl files for different Python versions here:
+https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
