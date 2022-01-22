@@ -16,34 +16,6 @@ from strategies.ScalpEmaRsiAdx import ScalpEmaRsiAdx
 # We inherit from the parent strategy for the rest.
 class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
 
-    # Ratio of the total account balance allowed to be traded.
-    # Positive float between 0.0 and 1.0
-    TRADABLE_BALANCE_RATIO = 1.0
-
-    # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 40
-
-    # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
-    # Value should be between 0 and 1
-    EMA_TOLERANCE = 0.05
-
-    # Momentum indicator: RSI - Relative Strength Index
-    RSI_PERIODS = 2
-    RSI_MIN_SIGNAL_THRESHOLD = 19
-    RSI_MAX_SIGNAL_THRESHOLD = 81
-
-    # Trade entry RSI thresholds
-    # (by default equal to RSI signal min/max thresholds)
-    RSI_MIN_ENTRY_THRESHOLD = 30
-    RSI_MAX_ENTRY_THRESHOLD = 70
-
-    # Volatility indicator: ADX - Average Directional Index
-    ADX_PERIODS = 3
-    ADX_THRESHOLD = 30
-
-    # Additional filter: wait an extra candle to confirm the direction of the trend
-    CONFIRMATION_FILTER = False  # Boolean True/False
-
     def __init__(self, params):
         ScalpEmaRsiAdx.__init__(self, params)
         BaseStrategy_X.__init__(self, params)

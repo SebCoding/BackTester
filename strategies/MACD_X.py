@@ -15,19 +15,6 @@ from strategies.MACD import MACD
 # We inherit from the parent strategy for the rest.
 class MACD_X(BaseStrategy_X, MACD):
 
-    # Ratio of the total account balance allowed to be traded.
-    # Positive float between 0.0 and 1.0
-    TRADABLE_BALANCE_RATIO = 1.0
-
-    # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 200
-
-    # Trend following momentum indicator:
-    # MACD - Moving Average Convergence Divergence
-    MACD_FAST_PERIOD = 12
-    MACD_SLOW_PERIOD = 26
-    MACD_SIGNAL_PERIOD = 9
-
     def __init__(self, params):
         MACD.__init__(self, params)
         BaseStrategy_X.__init__(self, params)
