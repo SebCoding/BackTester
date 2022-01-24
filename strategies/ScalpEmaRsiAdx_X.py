@@ -77,6 +77,10 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
             # Volatility Indicator. ADX-5
             df2[self.adx_col_name] = talib.ADX(df2['high'], df2['low'], df2['close'], timeperiod=self.ADX_PERIODS)
 
+            # self.df['EMA_Tolerance'] = self.df[self.ema_col_name] * self.EMA_TOLERANCE
+            df2['EMA_LONG'] = df2[self.ema_col_name] - df2[self.ema_col_name] * self.EMA_TOLERANCE
+            df2['EMA_SHORT'] = df2[self.ema_col_name] + df2[self.ema_col_name] * self.EMA_TOLERANCE
+
             # print(f'result_df_len: {len(df2)}')
             # print(df2.to_string())
             # print()
@@ -85,9 +89,9 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
             if trade_type == TradeTypes.Long:
                 df2.loc[
                     (
-                            (df2['close'] > df2[self.ema_col_name]) &  # price > EMA
-                            (df2[self.rsi_col_name] > self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI > RSI_MIN_THRESHOLD
-                            (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
+                        (df2['close'] > df2['EMA_LONG']) &  # price > EMA
+                        (df2[self.rsi_col_name] > self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI > RSI_MIN_THRESHOLD
+                        (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
                     ),
                     'enter'] = 1
 
@@ -95,9 +99,9 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
             if trade_type == TradeTypes.Short:
                 df2.loc[
                     (
-                            (df2['close'] < df2[self.ema_col_name]) &  # price < EMA-50
-                            (df2[self.rsi_col_name] < self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
-                            (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
+                        (df2['close'] < df2['EMA_SHORT']) &  # price < EMA-50
+                        (df2[self.rsi_col_name] < self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                        (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
                     ),
                     'enter'] = -1
 
