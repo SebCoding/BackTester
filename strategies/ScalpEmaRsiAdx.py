@@ -17,7 +17,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
     # Value should be between 0 and 1
-    EMA_TOLERANCE = 0.01
+    EMA_TOLERANCE = 0
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 3
@@ -123,6 +123,8 @@ class ScalpEmaRsiAdx(BaseStrategy):
         ema_col_index = self.df.columns.get_loc(self.ema_col_name)
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
         adx_col_index = self.df.columns.get_loc(self.adx_col_name)
+        ema_long_col_index = self.df.columns.get_loc('EMA_LONG')
+        ema_short_col_index = self.df.columns.get_loc('EMA_SHORT')
 
         # Index limit that can be used when the CONFIRMATION_FILTER is True
         i_max_condition_filter = len(self.df.index) - 1
@@ -149,14 +151,16 @@ class ScalpEmaRsiAdx(BaseStrategy):
             cur_ema = self.df.iloc[i, ema_col_index]
             cur_rsi = self.df.iloc[i, rsi_col_index]
             cur_adx = self.df.iloc[i, adx_col_index]
+            cur_ema_long = self.df.iloc[i, ema_long_col_index]
+            cur_ema_short = self.df.iloc[i, ema_short_col_index]
 
             # If after receiving a long signal the EMA or ADX are no longer satisfied, cancel signal
-            if received_long_signal and (cur_close < cur_ema or cur_adx < self.ADX_THRESHOLD):
+            if received_long_signal and (cur_close < cur_ema_long or cur_adx < self.ADX_THRESHOLD):
                 received_long_signal = False
                 continue
 
             # If after receiving a short signal the EMA or ADX are no longer satisfied, cancel signal
-            if received_short_signal and (cur_close > cur_ema or cur_adx < self.ADX_THRESHOLD):
+            if received_short_signal and (cur_close > cur_ema_short or cur_adx < self.ADX_THRESHOLD):
                 received_short_signal = False
                 continue
 
