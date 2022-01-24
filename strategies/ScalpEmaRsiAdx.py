@@ -1,5 +1,6 @@
 import datetime
 
+import numpy as np
 import talib
 
 from enums.TradeStatus import TradeStatuses
@@ -7,7 +8,6 @@ from strategies.BaseStrategy import BaseStrategy
 
 
 class ScalpEmaRsiAdx(BaseStrategy):
-
     # Ratio of the total account balance allowed to be traded.
     # Positive float between 0.0 and 1.0
     TRADABLE_BALANCE_RATIO = 1.0
@@ -17,7 +17,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
     # Value should be between 0 and 1
-    EMA_TOLERANCE = 0.05
+    EMA_TOLERANCE = 0.0005
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 3
@@ -83,10 +83,15 @@ class ScalpEmaRsiAdx(BaseStrategy):
     # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
     def add_trade_entry_points(self):
         print('Adding entry points for all trades.')
+
+        # self.df['EMA_Tolerance'] = self.df[self.ema_col_name] * self.EMA_TOLERANCE
+        self.df['EMA_LONG'] = self.df[self.ema_col_name] - self.df[self.ema_col_name] * self.EMA_TOLERANCE
+        self.df['EMA_SHORT'] = self.df[self.ema_col_name] + self.df[self.ema_col_name] * self.EMA_TOLERANCE
+
         # Mark long signals
         self.df.loc[
             (
-                (self.df['close'] > (self.df[self.ema_col_name] - self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price > EMA
+                (self.df['close'] > self.df['EMA_LONG']) &  # price > EMA
                 (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
                 (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
@@ -95,11 +100,14 @@ class ScalpEmaRsiAdx(BaseStrategy):
         # Mark short signals
         self.df.loc[
             (
-                (self.df['close'] < (self.df[self.ema_col_name] + self.df[self.ema_col_name]*self.EMA_TOLERANCE)) &  # price < EMA-50
+                (self.df['close'] < self.df['EMA_SHORT']) &  # price < EMA-50
                 (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
                 (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
+
+        # self.df.to_excel("out.xlsx", index=True, header=True)
+        # print(self.df.to_string())
 
         self.df['signal_offset'] = None
         self.df['trade_status'] = None
@@ -115,7 +123,6 @@ class ScalpEmaRsiAdx(BaseStrategy):
         ema_col_index = self.df.columns.get_loc(self.ema_col_name)
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
         adx_col_index = self.df.columns.get_loc(self.adx_col_name)
-
 
         # Index limit that can be used when the CONFIRMATION_FILTER is True
         i_max_condition_filter = len(self.df.index) - 1
@@ -190,7 +197,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         exit_statuses = [TradeStatuses.ExitLong, TradeStatuses.ExitShort,
                          TradeStatuses.EnterExitLong, TradeStatuses.EnterExitShort]
 
-        for i in range(current_index+offset, current_index, 1):
+        for i in range(current_index + offset, current_index, 1):
             if self.df.iloc[i, trade_status_col_index] in exit_statuses:
                 # Erase invalid trade entry
                 self.df.iloc[current_index, trade_status_col_index] = None
