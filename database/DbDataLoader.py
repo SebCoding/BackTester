@@ -40,7 +40,7 @@ class DbDataLoader(BaseDbData):
         """
         self.validate_pair(pair)
         self.validate_interval(interval)
-        self.delete_all_pair_interval_data(pair, interval)
+        #self.delete_all_pair_interval_data(pair, interval)
 
         table_name = self.get_table_name(pair, interval)
         start_time = from_time
@@ -90,14 +90,33 @@ class DbDataLoader(BaseDbData):
         query = query.replace('<table_name>', table_name)
         self.exec_sql_query(query)
 
+    def get_max_timestamp(self, pair, interval):
+        """
+            Returns the last candle timeframe in the database for this pair and interval
+        """
+        query = 'select max(open_time) from public."Candles_<pair>_<interval>"'
+        query = query.replace('<pair>', pair).replace('<interval>', interval)
+        connection = self.engine.connect()
+        result = self.exec_sql_query(query)
+        if result.rowcount > 0:
+            for row in result:
+                connection.close()
+                return int(row[0])
+        return None
+
     def load_pair_data_all_timeframes(self, pair):
         """
             select max(open_time) from public."Candles_BTCUSDT_1M"
+            # self.delete_all_pair_interval_data(pair, interval)
         """
         execution_start = time.time()
         for interval in reversed(config.VALID_INTERVALS):
-            # for interval in reversed('1m'):
-            from_time = dt.datetime(2000, 1, 1)
+            max_timestamp = self.get_max_timestamp(pair, interval)
+            if max_timestamp and isinstance(max_timestamp, int):
+                from_time = dt.datetime.fromtimestamp(max_timestamp/1000) + dt.timedelta(seconds=1)
+            else:
+                from_time = dt.datetime(2000, 1, 1)
             self.load_candle_data(pair, from_time, interval, True)
         exec_time = utils.format_execution_time(time.time() - execution_start)
         print(f'Load completed. Execution Time: {exec_time}\n')
+
