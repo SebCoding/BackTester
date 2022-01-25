@@ -34,9 +34,10 @@ class DbDataLoader(BaseDbData):
         if market is None:
             raise Exception(f'\nInvalid [{pair}] for exchange {self.exchange.name}.')
 
-
-
     def load_candle_data(self, pair, from_time, interval, verbose=False):
+        """
+            from_time: must be a datetime object
+        """
         self.validate_pair(pair)
         self.validate_interval(interval)
         self.delete_all_pair_interval_data(pair, interval)
@@ -90,19 +91,13 @@ class DbDataLoader(BaseDbData):
         self.exec_sql_query(query)
 
     def load_pair_data_all_timeframes(self, pair):
+        """
+            select max(open_time) from public."Candles_BTCUSDT_1M"
+        """
         execution_start = time.time()
         for interval in reversed(config.VALID_INTERVALS):
-        # for interval in reversed('1m'):
+            # for interval in reversed('1m'):
             from_time = dt.datetime(2000, 1, 1)
             self.load_candle_data(pair, from_time, interval, True)
         exec_time = utils.format_execution_time(time.time() - execution_start)
         print(f'Load completed. Execution Time: {exec_time}\n')
-
-
-
-
-
-
-
-
-

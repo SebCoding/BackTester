@@ -1,7 +1,5 @@
-from enum import Enum
 
-
-class TradeStatuses(str, Enum):
+class TradeStatuses:
     # Longs
     EnterLong = 'Enter Long'
     EnterExitLong = 'Enter/Exit Long'
@@ -13,5 +11,3 @@ class TradeStatuses(str, Enum):
     EnterExitShort = 'Enter/Exit Short'
     Short = 'Short'
     ExitShort = 'Exit Short'
-
-

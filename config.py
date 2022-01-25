@@ -7,7 +7,7 @@ RESULTS_PATH = 'output_files'  # Folder location where to store the back testing
 
 # True: Using local PostgreSQL database to store historical candle data
 # False: Getting data directly from exchange's API with limited caching in local files
-HISTORICAL_DATA_STORED_IN_DB = True
+HISTORICAL_DATA_STORED_IN_DB = False
 
 # File Formats
 SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']

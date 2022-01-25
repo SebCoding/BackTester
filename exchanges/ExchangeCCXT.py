@@ -11,7 +11,7 @@ import utils
 class ExchangeCCXT:
     NAME = None
 
-    USE_TESTNET = False  # Boolean True/False.
+    USE_TESTNET = True  # Boolean True/False.
 
     def __init__(self, name):
         self.exchange = getattr(ccxt, name)()

@@ -1,7 +1,5 @@
-from enum import Enum
 
-
-class TradeTypes(str, Enum):
+class TradeTypes:
     Long = 'Long'
     Short = 'Short'
 

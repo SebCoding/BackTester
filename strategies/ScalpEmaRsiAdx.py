@@ -13,24 +13,24 @@ class ScalpEmaRsiAdx(BaseStrategy):
     TRADABLE_BALANCE_RATIO = 1.0
 
     # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 50
+    EMA_PERIODS = 60
 
     # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
     # Value should be between 0 and 1
-    EMA_TOLERANCE = 0
+    EMA_TOLERANCE = 0.02
 
     # Momentum indicator: RSI - Relative Strength Index
-    RSI_PERIODS = 3
-    RSI_MIN_SIGNAL_THRESHOLD = 20
-    RSI_MAX_SIGNAL_THRESHOLD = 80
+    RSI_PERIODS = 2
+    RSI_MIN_SIGNAL_THRESHOLD = 31
+    RSI_MAX_SIGNAL_THRESHOLD = 69
 
     # Trade entry RSI thresholds (by default equal to RSI min/max thresholds)
-    RSI_MIN_ENTRY_THRESHOLD = 20
-    RSI_MAX_ENTRY_THRESHOLD = 80
+    RSI_MIN_ENTRY_THRESHOLD = 55
+    RSI_MAX_ENTRY_THRESHOLD = 45
 
     # Volatility indicator: ADX - Average Directional Index
-    ADX_PERIODS = 5
-    ADX_THRESHOLD = 30
+    ADX_PERIODS = 3
+    ADX_THRESHOLD = 20
 
     # Additional filter: wait an extra candle to confirm the direction of the trend
     CONFIRMATION_FILTER = False  # Boolean True/False
@@ -55,7 +55,8 @@ class ScalpEmaRsiAdx(BaseStrategy):
         details = f'EMA({self.EMA_PERIODS}), EMA_TOLERANCE({self.EMA_TOLERANCE}), RSI({self.RSI_PERIODS}), ' \
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
-                  f'ADX({self.ADX_PERIODS}), Filter({condition_filter}), ENTRY_AS_MAKER({self.ENTRY_AS_MAKER})'
+                  f'ADX({self.ADX_PERIODS}), ADX_THRESHOLD({self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
+                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER})'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals

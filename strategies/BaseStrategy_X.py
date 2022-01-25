@@ -21,7 +21,7 @@ class BaseStrategy_X(BaseStrategy):
     # The early strategy that will inherit this class needs to implement this
     # function to find the exact point in time when the strategy criteria are met
     @abstractmethod
-    def find_exact_trade_entry(self, df, from_time, to_time, trade_type, delta=0):
+    def find_exact_trade_entry(self, df, from_time, to_time, trade_type):
         pass
 
     # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics

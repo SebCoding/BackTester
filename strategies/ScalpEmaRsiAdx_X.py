@@ -22,8 +22,8 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
         self.NAME = self.__class__.__name__
 
     # Find with a minute precision the first point where we should enter the trade
-    # and return the time and closing price for that point in time + delta minutes
-    def find_exact_trade_entry(self, df, from_time, to_time, trade_type, delta=0):
+    # and return the time and closing price for that point in time
+    def find_exact_trade_entry(self, df, from_time, to_time, trade_type):
         # print(f'trade_type={trade_type}')
 
         # We need to get an extra row to see the value at -1min in case the cross is on the first row
@@ -90,7 +90,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
                 df2.loc[
                     (
                         (df2['close'] > df2['EMA_LONG']) &  # price > EMA
-                        (df2[self.rsi_col_name] > self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI > RSI_MIN_THRESHOLD
+                        (df2[self.rsi_col_name] > self.RSI_MIN_ENTRY_THRESHOLD) &  # RSI > RSI_MIN_ENTRY_THRESHOLD
                         (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
                     ),
                     'enter'] = 1
@@ -100,7 +100,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
                 df2.loc[
                     (
                         (df2['close'] < df2['EMA_SHORT']) &  # price < EMA-50
-                        (df2[self.rsi_col_name] < self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
+                        (df2[self.rsi_col_name] < self.RSI_MAX_ENTRY_THRESHOLD) &  # RSI > RSI_MAX_ENTRY_THRESHOLD
                         (df2[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
                     ),
                     'enter'] = -1
@@ -113,14 +113,15 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
         # print(f'result_df_len: {len(result_df)}')
         # print(result_df.to_string())
         # print('\n')
+        # exit(1972)
 
-        # Find first occurrence of crossing. Delta optional (add delta minutes)
+        # Find first occurrence of crossing.
         entry_price = 0.0  # Force float
         entry_time = dt.datetime(1, 1, 1)
         close_col_index = result_df.columns.get_loc("close")
         for i, row in enumerate(result_df.itertuples(index=True), 0):
             if row.enter in [-1, 1]:
-                entry_price = result_df.iloc[i + delta, close_col_index]
-                entry_time = utils.idx2datetime(result_df.index.values[i + delta])
+                entry_price = result_df.iloc[i, close_col_index]
+                entry_time = utils.idx2datetime(result_df.index.values[i]) + dt.timedelta(minutes=1)
                 break
         return entry_time, entry_price

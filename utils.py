@@ -148,7 +148,7 @@ def format_execution_time(seconds):
     output = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
     for c in output:
         if c in ['0', ':', 'h', 'm', 's', ' ']:
-            output = output.replace(c, '')
+            output = output.replace(c, '', 1)
         else:
             break
     if len(output) == 0:
