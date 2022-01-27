@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 import talib
 
-import config
+import constants
 import utils
+from Configuration import Configuration
 from enums.TradeTypes import TradeTypes
 
 from strategies.BaseStrategy_X import BaseStrategy_X
@@ -20,6 +21,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
         ScalpEmaRsiAdx.__init__(self, params)
         BaseStrategy_X.__init__(self, params)
         self.NAME = self.__class__.__name__
+        self.config = Configuration.get_config()
 
     # Find with a minute precision the first point where we should enter the trade
     # and return the time and closing price for that point in time
@@ -29,7 +31,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
         # We need to get an extra row to see the value at -1min in case the cross is on the first row
         to_time = to_time - dt.timedelta(minutes=1)
 
-        if config.HISTORICAL_DATA_STORED_IN_DB:
+        if self.config['database']['historical_data_stored_in_db']:
             minutes_df = self.db_reader.get_candle_data(
                 self.params['Pair'],
                 from_time,

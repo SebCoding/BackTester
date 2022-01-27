@@ -6,8 +6,9 @@ import math
 from abc import ABC, abstractmethod
 from os.path import exists
 
-import config
+import constants
 import utils
+from Configuration import Configuration
 
 
 class BaseExchange(ABC):
@@ -20,7 +21,9 @@ class BaseExchange(ABC):
 
     def __init__(self):
         super().__init__()
+        self.config = Configuration.get_config()
         self.markets_df = None
+        self.config = Configuration.get_config()
 
     # from_time and to_time are being passed as pandas._libs.tslibs.timestamps.Timestamp
     @abstractmethod
@@ -43,22 +46,21 @@ class BaseExchange(ABC):
         else:
             from_str = from_time.strftime('%Y-%m-%d')
             to_str = to_time.strftime('%Y-%m-%d')
+        filename = f"{self.config['output']['historical_files_path']}\\{self.NAME} {pair} [{interval}] {from_str} to {to_str}"
         if prior > 0:
-            filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str} [-{prior}] '
-        else:
-            filename = config.HISTORICAL_FILES_PATH + '\\' + f'{self.NAME} {pair} [{interval}] {from_str} to {to_str}'
+            filename += " [-{prior}] "
         return filename
 
     def save_candle_data(self, pair, from_time, to_time, interval, df, prior=0, include_time=False, verbose=True):
 
         filename = self.get_exchange_data_filename_no_ext(pair, from_time, to_time, interval, prior, include_time)
 
-        if 'csv' in config.OUTPUT_FILE_FORMAT:
+        if 'csv' in self.config['output']['output_file_format']:
             filename = filename + '.csv'
             df.to_csv(filename, index=True, header=True)
             if verbose:
                 print(f'File created => [{filename}]')
-        if 'xlsx' in config.OUTPUT_FILE_FORMAT:
+        if 'xlsx' in self.config['output']['output_file_format']:
             filename = filename + '.xlsx'
             df.to_excel(filename, index=True, header=True)
             # to_excel_formatted(df, filename)
@@ -69,13 +71,13 @@ class BaseExchange(ABC):
     def get_cached_exchange_data(self, pair, from_time, to_time, interval, prior=0, include_time=False):
         filename = self.get_exchange_data_filename_no_ext(pair, from_time, to_time, interval, prior, include_time)
 
-        if 'csv' in config.OUTPUT_FILE_FORMAT:
+        if 'csv' in self.config['output']['output_file_format']:
             filename += '.csv'
             if exists(filename):
                 df = utils.read_csv_to_dataframe(filename)
                 # print(df.head().to_string())
                 return df
-        elif 'xlsx' in config.OUTPUT_FILE_FORMAT:
+        elif 'xlsx' in self.config['output']['output_file_format']:
             filename += '.xlsx'
             if exists(filename):
                 return utils.read_excel_to_dataframe(filename)

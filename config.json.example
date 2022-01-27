@@ -1,0 +1,19 @@
+{
+  "output": {
+    "progress_dots": true,
+    "test_cases_file_path": "TestCases.xlsx",
+    "historical_files_path": "exchange_data",
+    "results_path": "output_files",
+    "output_file_format": ["xlsx"]
+  },
+  "exchange": {
+    "use_testnet": false
+  },
+  "database": {
+     "historical_data_stored_in_db": true,
+     "address": "localhost",
+     "port": 5432,
+     "username": "CryptoMakerUser",
+     "password": "mypassword"
+   }
+}

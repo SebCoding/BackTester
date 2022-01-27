@@ -8,7 +8,8 @@ import datetime as dt
 from datetime import datetime
 import pandas as pd
 
-import config
+import constants
+from Configuration import Configuration
 from database.DbDataReader import DbDataReader
 from exchanges.ExchangeCCXT import ExchangeCCXT
 from stats import stats_utils
@@ -40,6 +41,7 @@ class BaseStrategy(ABC):
     MIN_DATA_SIZE = 0
 
     def __init__(self, params):
+        self.config = Configuration.get_config()
         self.df = None
         self.params = params
         self.progress_counter = 0
@@ -50,7 +52,7 @@ class BaseStrategy(ABC):
         self.MAKER_FEE_PCT = self.exchange.get_maker_fee(params['Pair'])
         self.TAKER_FEE_PCT = self.exchange.get_taker_fee(params['Pair'])
         self.stats = Statistics()
-        if config.HISTORICAL_DATA_STORED_IN_DB:
+        if self.config['database']['historical_data_stored_in_db']:
             self.db_reader = DbDataReader(self.exchange.NAME)
             self.db_engine = self.db_reader.engine
 
@@ -110,7 +112,7 @@ class BaseStrategy(ABC):
 
     # Step 0: Get candle data used to backtest the strategy
     def get_candle_data(self):
-        if config.HISTORICAL_DATA_STORED_IN_DB:
+        if self.config['database']['historical_data_stored_in_db']:
             self.df = self.db_reader.get_candle_data(
                 self.params['Pair'],
                 self.params['From_Time'],
@@ -440,7 +442,7 @@ class BaseStrategy(ABC):
             },
             ignore_index=True,
         )
-        if config.HISTORICAL_DATA_STORED_IN_DB:
+        if self.config['database']['historical_data_stored_in_db']:
             self.save_stats_to_db()
 
     def save_stats_to_db(self):

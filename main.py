@@ -1,10 +1,10 @@
 import time
 import warnings
-
 from datetime import datetime
 
-import config
+import constants
 import utils
+from Configuration import Configuration
 from params import validate_params, load_test_cases_from_file
 
 # Do not remove these imports even if PyCharm says they're unused
@@ -39,8 +39,9 @@ def backtest(params):
 
 
 def main():
+    config = Configuration.get_config()
     # Load test cases from Excel file
-    test_cases_df = load_test_cases_from_file(config.TEST_CASES_FILE_PATH)
+    test_cases_df = load_test_cases_from_file(config['output']['test_cases_file_path'])
     # print(test_cases_df.to_string())
 
     # Create an empty DataFrame with only headers to store Statistics
@@ -73,13 +74,13 @@ def main():
     # Save results to file
     now = datetime.now().strftime('[%Y-%m-%d] [%H.%M.%S]')
     statistics_df = statistics_df.set_index('Test #')
-    if 'csv' in config.OUTPUT_FILE_FORMAT:
-        filename = config.RESULTS_PATH + '\\' + f'Statistics - {now}.csv'
+    if 'csv' in config['output']['output_file_format']:
+        filename = f"{config['output']['results_path']}\\Statistics - {now}.csv"
         statistics_df.to_csv(filename, index=True, header=True)
         print(f'Stats file created => [{filename}]')
 
-    if 'xlsx' in config.OUTPUT_FILE_FORMAT:
-        filename = config.RESULTS_PATH + '\\' + f'Statistics - {now}.xlsx'
+    if 'xlsx' in config['output']['output_file_format']:
+        filename = f"{config['output']['results_path']}\\Statistics - {now}.xlsx"
         statistics_df.to_excel(filename, index=True, header=True)
         print(f'Stats file created => [{filename}]')
 

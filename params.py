@@ -2,13 +2,20 @@ import warnings
 
 import numpy as np
 import datetime as dt
+
+import constants
+from Configuration import Configuration
 from utils import read_excel_to_dataframe
 
-# Print parameter values.
-# 'all'=True prints all values
-# 'all'=False prints only relevant ones (default)
-import config
+config = Configuration.get_config()
+
+
 def print_parameters(params, all=False):
+    """
+        Print parameter values.
+        'all'=True prints all values
+        'all'=False prints only relevant ones (default)
+    """
     if all:
         print('------------------------ Params ---------------------------')
         for key, value in params.items():
@@ -27,7 +34,7 @@ def print_parameters(params, all=False):
 
 
 def validate_params(params):
-    if params['Exchange'].lower() not in [x.lower() for x in config.SUPPORTED_EXCHANGES]:
+    if params['Exchange'].lower() not in [x.lower() for x in constants.SUPPORTED_EXCHANGES]:
         raise Exception(f'Unsupported Exchange = [{params["Exchange"]}].')
 
     if not isinstance(params['From_Time'], dt.datetime):
@@ -39,12 +46,13 @@ def validate_params(params):
     if params['From_Time'] > params['To_Time']:
         raise Exception(f'Invalid date range. {params["From_Time"]} must be <= {params["To_Time"]}.')
 
-    if params["Interval"] not in config.VALID_INTERVALS:
+    if params["Interval"] not in constants.VALID_INTERVALS:
         raise Exception(f'Invalid Parameter: Interval = [{params["Interval"]}].')
 
     initial_capital = params["Initial_Capital"]
     if not isinstance(initial_capital, float) or initial_capital <= 0:
-        raise Exception(f'Invalid Parameter: Initial_Capital = [{initial_capital}]. Must be a positive value of type float.')
+        raise Exception(
+            f'Invalid Parameter: Initial_Capital = [{initial_capital}]. Must be a positive value of type float.')
 
     take_profit_pct = params["Take_Profit_PCT"]
     if not isinstance(take_profit_pct, float) or take_profit_pct <= 0:
@@ -53,18 +61,19 @@ def validate_params(params):
 
     stop_loss_pct = params["Stop_Loss_PCT"]
     if not isinstance(stop_loss_pct, float) or stop_loss_pct <= 0:
-        raise Exception(f'Invalid Parameter: Stop_Loss_PCT = [{stop_loss_pct}]. Must be a positive value of type float.')
+        raise Exception(
+            f'Invalid Parameter: Stop_Loss_PCT = [{stop_loss_pct}]. Must be a positive value of type float.')
 
-    if params['Strategy'] not in config.IMPLEMENTED_STRATEGIES:
+    if params['Strategy'] not in constants.IMPLEMENTED_STRATEGIES:
         raise Exception(f'Invalid Parameter: Unsupported Strategy = [{params["Strategy"]}]')
 
     # Convert all items to lower case
-    formats_list = config.OUTPUT_FILE_FORMAT
+    formats_list = config['output']['output_file_format']
     if not isinstance(formats_list, list) or \
             len(formats_list) == 0 or \
-            not set(formats_list).issubset(set(config.SUPPORTED_FILE_FORMATS)) :
+            not set(formats_list).issubset(set(constants.SUPPORTED_FILE_FORMATS)):
         raise Exception(f'Invalid Output file format(s): {formats_list}.')
-    config.OUTPUT_FILE_FORMAT = [x.lower() for x in config.OUTPUT_FILE_FORMAT]
+    config['output']['output_file_format'] = [x.lower() for x in config['output']['output_file_format']]
 
 
 def load_test_cases_from_file(filename):

@@ -7,7 +7,7 @@ import time
 import ccxt
 import pandas as pd
 
-import config
+import constants
 import utils
 from database.BaseDbData import BaseDbData
 
@@ -110,7 +110,7 @@ class DbDataLoader(BaseDbData):
             # self.delete_all_pair_interval_data(pair, interval)
         """
         execution_start = time.time()
-        for interval in reversed(config.VALID_INTERVALS):
+        for interval in reversed(constants.VALID_INTERVALS):
             max_timestamp = self.get_max_timestamp(pair, interval)
             if max_timestamp and isinstance(max_timestamp, int):
                 from_time = dt.datetime.fromtimestamp(max_timestamp/1000) + dt.timedelta(seconds=1)

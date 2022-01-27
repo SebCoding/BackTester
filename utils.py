@@ -6,12 +6,15 @@ import pandas as pd
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-import config
+import constants
 
 
 # Adjust from_time to include prior X entries for that interval for ema200
+from Configuration import Configuration
+
+
 def adjust_from_time(from_time, interval, include_prior):
-    if interval not in config.VALID_INTERVALS:
+    if interval not in constants.VALID_INTERVALS:
         raise Exception(f'Invalid interval value: {interval}')
 
     delta = include_prior - 1
@@ -34,6 +37,7 @@ def idx2datetime(index_value):
 
 
 def save_trades_to_file(test_num, exchange, pair, from_time, to_time, interval, df, include_time=False, verbose=True):
+    config = Configuration.get_config()
     test_num = str(test_num)
     pair = pair.replace('/', '-')
 
@@ -45,14 +49,14 @@ def save_trades_to_file(test_num, exchange, pair, from_time, to_time, interval, 
         to_str = to_time.strftime('%Y-%m-%d')
 
     filename = f'{exchange} {pair} [{interval}] {from_str} to {to_str}'
-    filename = config.RESULTS_PATH + f'\\{test_num} ' + filename + ' Trades'
+    filename = f"{config['output']['results_path']}\\{test_num} {filename} Trades"
 
-    if 'csv' in config.OUTPUT_FILE_FORMAT:
+    if 'csv' in config['output']['output_file_format']:
         filename = filename + '.csv'
         df.to_csv(filename, index=True, header=True)
         if verbose:
             print(f'Trades file created => [{filename}]')
-    if 'xlsx' in config.OUTPUT_FILE_FORMAT:
+    if 'xlsx' in config['output']['output_file_format']:
         filename = filename + '.xlsx'
         df.to_excel(filename, index=True, header=True)
         # to_excel_formatted(df, filename)
@@ -76,7 +80,7 @@ def to_excel_formatted(df, filename):
 
 
 def convert_interval_to_min(interval):
-    if interval not in config.VALID_INTERVALS:
+    if interval not in constants.VALID_INTERVALS:
         raise Exception(f'Invalid interval value: {interval}')
 
     if 'm' in interval:

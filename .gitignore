@@ -6,3 +6,5 @@ output_files/*
 !output_files/.gitkeep
 exchange_data/*
 !exchange_data/.gitkeep
+config.json
+
