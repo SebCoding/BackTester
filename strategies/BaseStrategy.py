@@ -33,8 +33,6 @@ class BaseStrategy(ABC):
     ENTRY_AS_MAKER = True
 
     # Used to output on console a dot for each trade processed.
-    # Used as limited output progress bar
-    USE_DOT_PROGRESS_OUTPUT = True
     PROGRESS_COUNTER_MAX = 90
 
     # Cannot run Strategy on data set less than this value
@@ -459,7 +457,7 @@ class BaseStrategy(ABC):
 
     # Call this method each time a processed to update progress on console
     def update_progress_dots(self):
-        if self.USE_DOT_PROGRESS_OUTPUT:
+        if self.config['output']['progress_dots']:
             print('.', end='')
             self.progress_counter += 1
             if self.progress_counter > self.PROGRESS_COUNTER_MAX:
