@@ -1,6 +1,6 @@
 import sqlalchemy
 from sqlalchemy_utils import database_exists
-
+from sqlalchemy.engine.reflection import Inspector
 from Configuration import Configuration
 
 
@@ -10,10 +10,12 @@ class BaseDbData:
     def __init__(self, exchange_name):
         self.config = Configuration.get_config()
         # Database
-        self.db_name = exchange_name.capitalize()
+        self.db_name = exchange_name.capitalize().replace('_testnet', '_Testnet')
         self.db_url = self.get_db_url(self.db_name)
         self.validate_db()
         self.engine = sqlalchemy.create_engine(self.db_url)
+        self.inspector = Inspector.from_engine(self.engine)
+        #self.metadata = sqlalchemy.MetaData(self.engine)
 
     def validate_db(self):
         if not database_exists(self.db_url):

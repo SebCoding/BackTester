@@ -16,7 +16,7 @@ class ExchangeCCXT:
         self.config = Configuration.get_config()
         self.exchange = getattr(ccxt, name)()
         self.NAME = self.exchange.name
-        self.USE_TESTNET = self.config['exchange']['use_testnet']
+        self.use_testnet = self.config['exchange']['use_testnet']
 
         # exchange_id = name
         # exchange_class = getattr(ccxt, exchange_id)
@@ -29,7 +29,7 @@ class ExchangeCCXT:
         #     },
         # })
 
-        if self.USE_TESTNET:
+        if self.use_testnet:
             # Testnet
             self.exchange.set_sandbox_mode(True)
             self.NAME += '_Testnet'

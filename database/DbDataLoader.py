@@ -10,6 +10,7 @@ import pandas as pd
 import constants
 import utils
 from database.BaseDbData import BaseDbData
+from sqlalchemy.engine.reflection import Inspector
 
 
 class DbDataLoader(BaseDbData):
@@ -17,7 +18,13 @@ class DbDataLoader(BaseDbData):
     def __init__(self, exchange_name):
         super().__init__(exchange_name)
         # Exchange
-        self.exchange = getattr(ccxt, exchange_name.lower())()
+        self.exchange_name = exchange_name
+        exchange_class_name = exchange_name.replace('_Testnet', '').lower()
+        self.exchange = getattr(ccxt, exchange_class_name)()
+        if '_Testnet' in exchange_name:
+            self.exchange.set_sandbox_mode(True)
+        else:
+            self.exchange.set_sandbox_mode(False)
         self.exchange.options['defaultType'] = 'future'
         self.exchange.timeout = 300000  # number in milliseconds, default 10000
         self.exchange.load_markets()
@@ -40,7 +47,7 @@ class DbDataLoader(BaseDbData):
         """
         self.validate_pair(pair)
         self.validate_interval(interval)
-        #self.delete_all_pair_interval_data(pair, interval)
+        # self.delete_all_pair_interval_data(pair, interval)
 
         table_name = self.get_table_name(pair, interval)
         start_time = from_time
@@ -50,7 +57,7 @@ class DbDataLoader(BaseDbData):
             if verbose:
                 # from_time_str = from_time.strftime('%Y-%m-%d')
                 # to_time_str = to_time.strftime('%Y-%m-%d')
-                print(f'Loading {pair} data from {self.exchange.name} into the [{table_name}] table.',
+                print(f'Loading {pair} data from {self.exchange_name} into the [{table_name}] table.',
                       f'From[{dt.datetime.fromtimestamp(last_datetime_stamp / 1000)}] => ', end='')
 
             result = self.exchange.fetch_ohlcv(
@@ -86,23 +93,23 @@ class DbDataLoader(BaseDbData):
     def delete_all_pair_interval_data(self, pair, interval):
         table_name = self.get_table_name(pair, interval)
         print(f'Deleting table [{self.db_name}].[{table_name}]')
-        query = 'DROP TABLE IF EXISTS public."<table_name>"'
-        query = query.replace('<table_name>', table_name)
+        query = f'DROP TABLE IF EXISTS public."{table_name}"'
         self.exec_sql_query(query)
 
     def get_max_timestamp(self, pair, interval):
         """
             Returns the last candle timeframe in the database for this pair and interval
         """
-        query = 'select max(open_time) from public."Candles_<pair>_<interval>"'
-        query = query.replace('<pair>', pair).replace('<interval>', interval)
-        connection = self.engine.connect()
-        result = self.exec_sql_query(query)
-        if result.rowcount > 0:
-            for row in result:
-                connection.close()
-                return int(row[0])
-        return None
+        table_name = f'Candles_{pair}_{interval}'
+        with self.engine.connect() as connection:
+            if self.inspector.has_table(table_name, schema='public'):
+                table_name = f'public."{table_name}"'
+                query = f'select max(open_time) from {table_name}'
+                result = self.exec_sql_query(query)
+                if result.rowcount > 0:
+                    for row in result:
+                        return int(row[0])
+            return None
 
     def load_pair_data_all_timeframes(self, pair):
         """
