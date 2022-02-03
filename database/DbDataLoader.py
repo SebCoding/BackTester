@@ -39,7 +39,7 @@ class DbDataLoader(BaseDbData):
     def validate_pair(self, pair):
         market = self.exchange.market(pair)
         if market is None:
-            raise Exception(f'\nInvalid [{pair}] for exchange {self.exchange.name}.')
+            raise Exception(f'\nInvalid [{pair}] for exchange {self.exchange_name}.')
 
     def load_candle_data(self, pair, from_time, interval, verbose=False):
         """
@@ -84,10 +84,12 @@ class DbDataLoader(BaseDbData):
             last_datetime_stamp = float(max(df.open_time) + 1000)  # Add (1000ms = 1s) to last data received
 
         # Make the index column the Primary Key
-        query = f'ALTER TABLE IF EXISTS public."{table_name}" DROP CONSTRAINT IF EXISTS "{table_name}_pkey"; ' \
-                f'ALTER TABLE public."{table_name}" ADD PRIMARY KEY (index);'
-        # print(query)
-        self.exec_sql_query(query)
+        query1 = f'ALTER TABLE IF EXISTS public."{table_name}" DROP CONSTRAINT IF EXISTS "{table_name}_pkey"; '
+        self.exec_sql_query(query1)
+
+        query2 = f'ALTER TABLE public."{table_name}" ADD PRIMARY KEY (index);'
+        self.exec_sql_query(query2)
+
 
     # delete all data in the database for this pair and this interval
     def delete_all_pair_interval_data(self, pair, interval):

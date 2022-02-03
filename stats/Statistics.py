@@ -28,14 +28,14 @@ class Statistics:
 
     total_trades = property(get_total_trades)
 
-    def get_success_rate(self):
+    def get_win_rate(self):
         if self.total_trades != 0:
             rate = (float(self.nb_wins) / float(self.total_trades)) * 100
             return round(rate, 1)
         else:
             return 0
 
-    success_rate = property(get_success_rate)
+    win_rate = property(get_win_rate)
 
     def get_total_pl(self):
         return round(self.total_wins + self.total_losses - self.total_fees_paid, 2)
@@ -44,7 +44,7 @@ class Statistics:
 
     def to_string(self):
         total_trades = self.nb_wins + self.nb_losses
-        success_rate = (self.nb_wins / total_trades * 100) if total_trades != 0 else 0
+        win_rate = (self.nb_wins / total_trades * 100) if total_trades != 0 else 0
         locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
         print(f'\n-------------------- Statistics --------------------')
         print(f'Winning Trades: {self.nb_wins}')
@@ -54,7 +54,7 @@ class Statistics:
         print(f'Max # Consecutive Losses: {self.max_conseq_losses}')
         print('---')
         print(f'Total Trades: {total_trades}')
-        print(f'Success Rate: {success_rate:.1f}%')
+        print(f'Win Rate: {win_rate:.1f}%')
         print(f'Win/Loose Index: Min[{self.min_win_loose_index}] Max[{self.max_win_loose_index}]')
         print()
         print(f'Total Wins: {locale.currency(self.total_wins, grouping=True)}')

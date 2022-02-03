@@ -93,7 +93,7 @@ def get_initial_statistics_df():
         'Wins',
         'Losses',
         'Trades',
-        'Success Rate',
+        'Win Rate',
         'Loss Idx',
         'Win Idx',
         'Wins $',
@@ -102,5 +102,26 @@ def get_initial_statistics_df():
         'Total P/L',
         'Details'
     ])
+
+    # # Set the column types
+    # statistics_df.index = statistics_df.index.astype(int)
+    # # statistics_df['Interval'] = statistics_df['Interval'].astype(str)
+    # statistics_df['Init Capital'] = statistics_df['Init Capital'].astype(float)
+    # statistics_df['TP %'] = statistics_df['TP %'].astype(float)
+    # statistics_df['SL %'] = statistics_df['SL %'].astype(float)
+    # statistics_df['Maker Fee %'] = statistics_df['Maker Fee %'].astype(float)
+    # statistics_df['Taker Fee %'] = statistics_df['Taker Fee %'].astype(float)
+    #
+    # statistics_df['Wins'] = statistics_df['Wins'].astype(int)
+    # statistics_df['Losses'] = statistics_df['Losses'].astype(int)
+    # statistics_df['Trades'] = statistics_df['Trades'].astype(int)
+    # statistics_df['Win Rate'] = statistics_df['Win Rate'].astype(float)
+    # statistics_df['Loss Idx'] = statistics_df['Loss Idx'].astype(int)
+    # statistics_df['Win Idx'] = statistics_df['Win Idx'].astype(int)
+    #
+    # statistics_df['Wins $'] = statistics_df['Wins $'].astype(float)
+    # statistics_df['Losses $'] = statistics_df['Losses $'].astype(float)
+    # statistics_df['Fees $'] = statistics_df['Fees $'].astype(float)
+    # statistics_df['Total P/L'] = statistics_df['Total P/L'].astype(float)
     # print(results_df.to_string())
     return statistics_df

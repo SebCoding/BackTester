@@ -8,6 +8,7 @@ from Configuration import Configuration
 from params import validate_params, load_test_cases_from_file
 
 # Do not remove these imports even if PyCharm says they're unused
+from strategies.MACD_BB_Freeman import MACD_BB_Freeman
 from strategies.MACD import MACD
 from strategies.MACD_X import MACD_X
 from strategies.ScalpEmaRsiAdx import ScalpEmaRsiAdx
@@ -26,9 +27,9 @@ from stats import stats_utils
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
-    print(f'=============================================',
+    print(f'==================================================',
           f'TEST #{params["Test_Num"]}',
-          '=============================================')
+          f'==================================================')
     execution_start = time.time()
     validate_params(params)
     strategy = globals()[params['Strategy']](params)

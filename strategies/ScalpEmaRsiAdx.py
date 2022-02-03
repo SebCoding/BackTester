@@ -8,10 +8,11 @@ from strategies.BaseStrategy import BaseStrategy
 
 
 class ScalpEmaRsiAdx(BaseStrategy):
-    # Ratio of the total account balance allowed to be traded.
-    # Positive float between 0.0 and 1.0
-    TRADABLE_BALANCE_RATIO = 1.0
-
+    """
+        Implementation of the Scalping Strategy found here:
+        https://www.youtube.com/watch?v=vBM0imYSzxI
+        Using EMA RSI ADX Indicators
+    """
     # Trend indicator: EMA - Exponential Moving Average
     EMA_PERIODS = 60
 

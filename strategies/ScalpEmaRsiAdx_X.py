@@ -16,7 +16,12 @@ from strategies.ScalpEmaRsiAdx import ScalpEmaRsiAdx
 # We inherit from EarlyStrategy for the process_trades() method
 # We inherit from the parent strategy for the rest.
 class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
-
+    """
+        Implementation of the Scalping Strategy found here:
+        https://www.youtube.com/watch?v=vBM0imYSzxI
+        Using EMA RSI ADX Indicators. This _X version of the base strategy uses a minute precision
+        for trade entries as opposed to the end of the interval.
+    """
     def __init__(self, params):
         ScalpEmaRsiAdx.__init__(self, params)
         BaseStrategy_X.__init__(self, params)

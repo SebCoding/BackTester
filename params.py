@@ -94,4 +94,5 @@ def load_test_cases_from_file(filename):
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
     print(df.to_string())
+    # print('\n'+df.to_markdown()+'\n')
     return df

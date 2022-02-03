@@ -25,15 +25,8 @@ from exchanges.Bybit import Bybit
 class BaseStrategy(ABC):
     NAME = 'abstract'
 
-    # Ratio of the total account balance the bot is allowed to trade.
-    # Positive float between 0.0 and 1.0
-    TRADABLE_BALANCE_RATIO = 0.0
-
-    # Are we entering trades as maker (True) or as taker (False)
-    ENTRY_AS_MAKER = True
-
     # Used to output on console a dot for each trade processed.
-    PROGRESS_COUNTER_MAX = 90
+    PROGRESS_COUNTER_MAX = 100
 
     # Cannot run Strategy on data set less than this value
     MIN_DATA_SIZE = 0
@@ -43,6 +36,8 @@ class BaseStrategy(ABC):
         self.df = None
         self.params = params
         self.progress_counter = 0
+        self.TRADABLE_BALANCE_RATIO = self.config['trades']['tradable_ratio']
+        self.ENTRY_AS_MAKER = self.config['trades']['entry_as_maker']
         self.TP_PCT = self.params['Take_Profit_PCT'] / 100
         self.SL_PCT = self.params['Stop_Loss_PCT'] / 100
         # self.exchange = globals()[params['Exchange']]()
@@ -426,10 +421,10 @@ class BaseStrategy(ABC):
                 'Taker Fee %': self.TAKER_FEE_PCT * 100,
                 'Strategy': self.NAME,
 
-                'Wins': self.stats.nb_wins,
-                'Losses': self.stats.nb_losses,
-                'Trades': self.stats.total_trades,
-                'Success Rate': f'{self.stats.success_rate:.1f}%',
+                'Wins': int(self.stats.nb_wins),
+                'Losses': int(self.stats.nb_losses),
+                'Trades': int(self.stats.total_trades),
+                'Win Rate': f'{self.stats.win_rate:.1f}%',
                 'Loss Idx': self.stats.min_win_loose_index,
                 'Win Idx': self.stats.max_win_loose_index,
                 'Wins $': f'{self.stats.total_wins:,.2f}',

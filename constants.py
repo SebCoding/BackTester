@@ -25,7 +25,7 @@ VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h'
 # VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w', '1M']
 
 # Implemented Strategies
-IMPLEMENTED_STRATEGIES = ['MACD', 'MACD_X', 'ScalpEmaRsiAdx', 'ScalpEmaRsiAdx_X']
+IMPLEMENTED_STRATEGIES = ['MACD_BB_Freeman', 'MACD', 'MACD_X', 'ScalpEmaRsiAdx', 'ScalpEmaRsiAdx_X']
 
 # JSON configuration schema to validate the config.json file
 CONFIG_SCHEMA = {
@@ -35,6 +35,14 @@ CONFIG_SCHEMA = {
     'description': 'json schema to validate config.json file',
     'type': 'object',
     'properties': {
+        'trades': {
+            'type': 'object',
+            'properties': {
+                'tradable_ratio': {'type': 'number', 'exclusiveMinimum': 0, 'maximum': 1.0},
+                'entry_as_maker': {'type': 'boolean', 'default': False}
+            },
+            'required': ['tradable_ratio', 'entry_as_maker']
+        },
         'output': {
             'type': 'object',
             'properties': {
@@ -57,10 +65,10 @@ CONFIG_SCHEMA = {
                 'output_file_format': {
                     'description': 'Preferred format(s) for the output: csv, xlsx or both. Ex: [\'csv\', \'xlsx\']',
                     'type': 'array',
-                    'items': {'type': 'string',  'enum': SUPPORTED_FILE_FORMATS},
+                    'items': {'type': 'string', 'enum': SUPPORTED_FILE_FORMATS},
                     'minItems': 1,
                     'uniqueItems': True
-                 }
+                }
             },
             'required': [
                 'progress_dots',
@@ -93,5 +101,5 @@ CONFIG_SCHEMA = {
             'required': ['historical_data_stored_in_db', 'address', 'port', 'username', 'password']
         },
     },
-    'required': ['output', 'exchange', 'database']
+    'required': ['trades', 'output', 'exchange', 'database']
 }
