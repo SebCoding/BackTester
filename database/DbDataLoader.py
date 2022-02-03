@@ -84,11 +84,11 @@ class DbDataLoader(BaseDbData):
             last_datetime_stamp = float(max(df.open_time) + 1000)  # Add (1000ms = 1s) to last data received
 
         # Make the index column the Primary Key
-        query1 = f'ALTER TABLE IF EXISTS public."{table_name}" DROP CONSTRAINT IF EXISTS "{table_name}_pkey"; '
-        self.exec_sql_query(query1)
-
-        query2 = f'ALTER TABLE public."{table_name}" ADD PRIMARY KEY (index);'
-        self.exec_sql_query(query2)
+        # query1 = f'ALTER TABLE IF EXISTS public."{table_name}" DROP CONSTRAINT IF EXISTS "{table_name}_pkey"; '
+        # self.exec_sql_query(query1)
+        #
+        # query2 = f'ALTER TABLE public."{table_name}" ADD PRIMARY KEY (index);'
+        # self.exec_sql_query(query2)
 
 
     # delete all data in the database for this pair and this interval
