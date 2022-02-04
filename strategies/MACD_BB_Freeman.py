@@ -21,10 +21,11 @@ class MACD_BB_Freeman(BaseStrategy):
         Bollinger Bands: Bollinger Bands are envelopes plotted at a standard deviation level above and below
                          a simple moving average of the price.
     """
+    MA_CALCULATION_TYPE_VALID_VALUES = ['SMA', 'EMA', 'WMA', 'Linear']
 
     # Type of moving average used internally for the MACD calculation
     # Possible values: 'SMA', 'EMA', 'WMA', 'Linear'
-    MA_CALCULATION_TYPE = 'SMA'
+    MA_CALCULATION_TYPE = 'WMA'
 
     # Trend following momentum indicator:
     # MACD - Moving Average Convergence Divergence
@@ -43,10 +44,12 @@ class MACD_BB_Freeman(BaseStrategy):
         self.NAME = self.__class__.__name__
         # Slow MA needs to be calculated first to then calculate BB
         self.MIN_DATA_SIZE = self.MACD_SLOW_PERIODS + self.BB_PERIODS
+        assert(self.MA_CALCULATION_TYPE in self.MA_CALCULATION_TYPE_VALID_VALUES)
 
     def get_strategy_text_details(self):
         details = f'MA_CALC_TYPE({self.MA_CALCULATION_TYPE}), MACD_FAST({self.MACD_FAST_PERIODS}), ' \
-                  f'MACD_SLOW({self.MACD_SLOW_PERIODS}), BB_PERIODS({self.BB_PERIODS}), BB_MULT({self.BB_MULT})'
+                  f'MACD_SLOW({self.MACD_SLOW_PERIODS}), BB_PERIODS({self.BB_PERIODS}), BB_MULT({self.BB_MULT}), ' \
+                  f'EXIT({self.params["Exit_Strategy"]})'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
@@ -85,22 +88,29 @@ class MACD_BB_Freeman(BaseStrategy):
                 matype=0  # Moving average type: simple moving average here
             )
 
+        # Remove rows with null entries for BB because crossovers are invalid on row #1
+        self.df = self.df.dropna(subset=['BB_Basis'])
+
         # Long Condition = ta.crossover(macd, lower)
         # Short Condition = ta.crossunder(macd, upper)
 
         # If MACD is over BB_Lower: 1 else 0
-        self.df['OverLower'] = np.where(self.df['MACD'] > self.df['BB_Lower'], 1, 0)
+        self.df.loc[:, 'OverLower'] = 0
+        self.df.loc[self.df['MACD'] > self.df['BB_Lower'], 'OverLower'] = 1
 
         # If MACD crosses over BB_Lower: 1
         # If MACD crosses under BB_Lower: -1
-        self.df['CrossOverLower'] = self.df['OverLower'].diff()
+        self.df.loc[:, 'CrossOverLower'] = 0
+        self.df.loc[:, 'CrossOverLower'] = self.df['OverLower'].diff()
 
         # If MACD is lower BB_Upper: 1 else 0
-        self.df['LowerUpper'] = np.where(self.df['MACD'] < self.df['BB_Upper'], 1, 0)
+        self.df.loc[:, 'LowerUpper'] = 0
+        self.df.loc[self.df['MACD'] < self.df['BB_Upper'], 'LowerUpper'] = 1
 
         # If MACD crosses over BB_Upper: -1
         # If MACD crosses under BB_Upper: 1
-        self.df['CrossUnderUpper'] = self.df['LowerUpper'].diff()
+        self.df.loc[:, 'CrossUnderUpper'] = 0
+        self.df.loc[:, 'CrossUnderUpper'] = self.df['LowerUpper'].diff()
 
     # Step 2: Add trade entry points
     # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
@@ -114,14 +124,14 @@ class MACD_BB_Freeman(BaseStrategy):
         
     def clean_df_prior_to_saving(self):
         # Round all values to 2 decimals
-        self.df['take_profit'] = self.df['take_profit'].astype(float).round(2)
-        self.df['stop_loss'] = self.df['stop_loss'].astype(float).round(2)
+        self.df.loc[:, 'take_profit'] = self.df['take_profit'].astype(float).round(2)
+        self.df.loc[:, 'stop_loss'] = self.df['stop_loss'].astype(float).round(2)
         self.df = self.df.round(decimals=2)
 
-        self.df.drop(['OverLower', 'LowerUpper'], axis=1, inplace=True)
+        self.df.drop(['OverLower', 'LowerUpper', 'BB_Basis'], axis=1, inplace=True)
 
-        # Remove rows with nulls entries for EMA
-        # self.df = self.df.dropna(subset=['MACD'])
+        # Remove rows with nulls entries for indicators
+        self.df = self.df.dropna(subset=['CrossUnderUpper'])
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))

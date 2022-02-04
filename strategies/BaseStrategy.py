@@ -6,6 +6,8 @@ import math
 from abc import ABC, abstractmethod
 import datetime as dt
 from datetime import datetime
+
+import numpy as np
 import pandas as pd
 
 import constants
@@ -54,8 +56,9 @@ class BaseStrategy(ABC):
         self.add_indicators_and_signals()  # Step1
         self.add_trade_entry_points()  # Step2
         self.process_trades()  # Step3
-        self.save_trades_to_file()  # Step 4
-        self.finalize_stats()  # Step 5
+        self.validate_trades()  # Step 4
+        self.save_trades_to_file()  # Step 5
+        self.finalize_stats()  # Step 6
 
     # Calculate indicator values required to determine long/short signals
     @abstractmethod
@@ -148,12 +151,12 @@ class BaseStrategy(ABC):
         print(self.get_strategy_text_details())
 
         # Add and Initialize new columns
-        self.df['wallet'] = 0.0
-        self.df['take_profit'] = None
-        self.df['stop_loss'] = None
-        self.df['win'] = 0.0
-        self.df['loss'] = 0.0
-        self.df['fee'] = 0.0
+        self.df.loc[:, 'wallet'] = 0.0
+        self.df.loc[:, 'take_profit'] = None
+        self.df.loc[:, 'stop_loss'] = None
+        self.df.loc[:, 'win'] = 0.0
+        self.df.loc[:, 'loss'] = 0.0
+        self.df.loc[:, 'fee'] = 0.0
 
         # We use numeric indexing to update values in the DataFrame
         # Find the column indexes
@@ -227,7 +230,7 @@ class BaseStrategy(ABC):
                 # We just entered TradeStatuses.EnterLong in this candle so set the status to TradeStatuses.Long
                 trade_status = TradeStatuses.Long
 
-            elif trade_status in [TradeStatuses.Long] and pd.isnull(row.trade_status):
+            elif trade_status in [TradeStatuses.Long]:
                 if row.low <= stop_loss:
                     loss = staked_amount * self.SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitLong
@@ -266,13 +269,13 @@ class BaseStrategy(ABC):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     trade_status = TradeStatuses.Long
 
-            elif trade_status in [TradeStatuses.Long] and row.trade_status in [TradeStatuses.EnterLong,
-                                                                               TradeStatuses.EnterShort]:
-                # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
-                # ignore the signal and override the value with TradeStatuses.Long, we are already in a long
-                self.df.iloc[i, trade_status_col_index] = TradeStatuses.Long
-                self.df.iloc[i, tp_col_index] = take_profit
-                self.df.iloc[i, sl_col_index] = stop_loss
+            # elif trade_status in [TradeStatuses.Long] and row.trade_status in [TradeStatuses.EnterLong,
+            #                                                                    TradeStatuses.EnterShort]:
+            #     # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
+            #     # ignore the signal and override the value with TradeStatuses.Long, we are already in a long
+            #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.Long
+            #     self.df.iloc[i, tp_col_index] = take_profit
+            #     self.df.iloc[i, sl_col_index] = stop_loss
 
             # ------------------------------- Shorts -------------------------------
             elif trade_status == '' and row.trade_status == TradeStatuses.EnterShort and self.entry_is_valid(i):
@@ -334,7 +337,7 @@ class BaseStrategy(ABC):
                 # We just entered TradeStatuses.EnterShort in this candle, so set the status to TradeStatuses.Short
                 trade_status = TradeStatuses.Short
 
-            elif trade_status in [TradeStatuses.Short] and pd.isnull(row.trade_status):
+            elif trade_status in [TradeStatuses.Short]:
                 if row.high >= stop_loss:
                     loss = staked_amount * self.SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitShort
@@ -373,13 +376,13 @@ class BaseStrategy(ABC):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     trade_status = TradeStatuses.Short
 
-            elif trade_status in [TradeStatuses.Short] and row.trade_status in [TradeStatuses.EnterLong,
-                                                                                TradeStatuses.EnterShort]:
-                # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
-                # ignore the signal and override the value with TradeStatuses.Long, we are already in a short
-                self.df.iloc[i, trade_status_col_index] = TradeStatuses.Short
-                self.df.iloc[i, tp_col_index] = take_profit
-                self.df.iloc[i, sl_col_index] = stop_loss
+            # elif trade_status in [TradeStatuses.Short] and row.trade_status in [TradeStatuses.EnterLong,
+            #                                                                     TradeStatuses.EnterShort]:
+            #     # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
+            #     # ignore the signal and override the value with TradeStatuses.Long, we are already in a short
+            #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.Short
+            #     self.df.iloc[i, tp_col_index] = take_profit
+            #     self.df.iloc[i, sl_col_index] = stop_loss
 
             # Update account_balance running balance
             self.df.iloc[i, account_balance_col_index] = account_balance
@@ -390,7 +393,30 @@ class BaseStrategy(ABC):
         print()  # Jump to next line
         return self.df
 
-    # Step 4: Save trade data to file
+    # Step 4: Validate Trades, TP and SL Exits
+    def validate_trades(self):
+        trade_status_col_index = self.df.columns.get_loc("trade_status")
+        tp_col_index = self.df.columns.get_loc("take_profit")
+        sl_col_index = self.df.columns.get_loc("stop_loss")
+
+        conditions = [
+            ((self.df['high'] >= self.df['take_profit'].fillna(0)) & (self.df['trade_status'] == TradeStatuses.Long)),
+            ((self.df['low'] <= self.df['stop_loss'].fillna(0)) & (self.df['trade_status'] == TradeStatuses.Long)),
+            ((self.df['low'] <= self.df['take_profit'].fillna(0)) & (self.df['trade_status'] == TradeStatuses.Short)),
+            ((self.df['high'] >= self.df['stop_loss'].fillna(0)) & (self.df['trade_status'] == TradeStatuses.Short))
+        ]
+        choices = ['TP Exit Missed', 'SL Exit Missed', 'TP Exit Missed', 'SL Exit Missed']
+
+        self.df.loc[:, 'Exit Validation'] = np.select(conditions, choices, default=None)
+
+        errors_count = self.df['Exit Validation'].notnull().sum()
+        if errors_count > 0:
+            print(f'\n*** {errors_count} Errors where found related to TP/SL exits. '
+                  f'Check the "Exit Validation" column in the Trades file. ***\n')
+        else:
+            self.df.drop(['Exit Validation'], axis=1, inplace=True)
+
+    # Step 5: Save trade data to file
     def save_trades_to_file(self):
         # Save trade details to file
         self.clean_df_prior_to_saving()
@@ -402,6 +428,7 @@ class BaseStrategy(ABC):
                                   self.params['Interval'],
                                   self.df, False, True)
 
+    # Step 6: Write Statistics to Statistics Result DataFrame
     def finalize_stats(self):
         # self.stats.max_conseq_wins, self.stats.max_conseq_losses = stats_utils.get_consecutives(self.df)
         self.stats.min_win_loose_index, self.stats.max_win_loose_index = stats_utils.get_win_loss_indexes(self.df)
@@ -441,8 +468,8 @@ class BaseStrategy(ABC):
     def save_stats_to_db(self):
         table_name = 'Test_Results_Statistics'
         stats_df = self.params['Statistics'].iloc[[-1]]
-        now = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S') # Get current no milliseconds
-        now = datetime.strptime(now, '%Y-%m-%d %H:%M:%S') # convert str back to datetime
+        now = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current no milliseconds
+        now = datetime.strptime(now, '%Y-%m-%d %H:%M:%S')  # convert str back to datetime
 
         # Use: (df.loc[:,'New_Column']='value') or (df = df.assign(New_Column='value'))
         # instead of: df['New_Column']='value' <-- Generates warnings
@@ -463,5 +490,6 @@ class BaseStrategy(ABC):
     # returns true by default and should be redefined in subclasses if needed
     # For example, we might encounter a trade entry, but the signal has been
     # generated during a prior trade therefore we might want to bypass this trade
+    # (Used for ScalpEmaRsiAdx which used a signal and an entry that are separate).
     def entry_is_valid(self, current_index):
         return True

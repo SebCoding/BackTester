@@ -64,6 +64,7 @@ def main():
             , 'Take_Profit_PCT': row['TP %']
             , 'Stop_Loss_PCT': row['SL %']
             , 'Strategy': row['Strategy']
+            , 'Exit_Strategy': row['Exit_Strategy']
             , 'Statistics': statistics_df
         }
 

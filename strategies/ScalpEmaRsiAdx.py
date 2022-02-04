@@ -18,7 +18,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
     # Value should be between 0 and 1
-    EMA_TOLERANCE = 0.02
+    EMA_TOLERANCE = 0.0
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 2
@@ -57,7 +57,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
                   f'ADX({self.ADX_PERIODS}), ADX_THRESHOLD({self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
-                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER})'
+                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER}), EXIT({self.params["Exit_Strategy"]})'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
