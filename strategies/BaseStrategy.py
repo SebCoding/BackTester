@@ -3,6 +3,7 @@
     All strategies inherit from this class and must implement the abstract methods of this class
 """
 import math
+import sys
 from abc import ABC, abstractmethod
 import datetime as dt
 from datetime import datetime
@@ -140,14 +141,16 @@ class BaseStrategy(ABC):
 
     # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
-
+        exit_fixed_pct = self.params['Exit_Strategy'] == 'FixedPCT'
+        exit_on_entry = self.params['Exit_Strategy'] == 'ExitOnNextEntry'
         account_balance = self.params['Initial_Capital']
         staked_amount = 0.0
+        entry_price = 0.0
         stop_loss = 0.0
         take_profit = 0.0
         trade_status = ''
 
-        print(f'Processing trades using the [{self.NAME}] strategy.')
+        print(f"Processing trades using the [{self.NAME}, {self.params['Exit_Strategy']}] strategy.")
         print(self.get_strategy_text_details())
 
         # Add and Initialize new columns
@@ -156,7 +159,8 @@ class BaseStrategy(ABC):
         self.df.loc[:, 'stop_loss'] = None
         self.df.loc[:, 'win'] = 0.0
         self.df.loc[:, 'loss'] = 0.0
-        self.df.loc[:, 'fee'] = 0.0
+        self.df.loc[:, 'entry_fee'] = 0.0
+        self.df.loc[:, 'exit_fee'] = 0.0
 
         # We use numeric indexing to update values in the DataFrame
         # Find the column indexes
@@ -166,12 +170,13 @@ class BaseStrategy(ABC):
         sl_col_index = self.df.columns.get_loc("stop_loss")
         wins_col_index = self.df.columns.get_loc("win")
         losses_col_index = self.df.columns.get_loc("loss")
-        fee_col_index = self.df.columns.get_loc("fee")
+        entry_fee_col_index = self.df.columns.get_loc("entry_fee")
+        exit_fee_col_index = self.df.columns.get_loc("exit_fee")
 
         for i, row in enumerate(self.df.itertuples(index=True), 0):
 
             # ------------------------------- Longs -------------------------------
-            if trade_status == '' and row.trade_status == TradeStatuses.EnterLong and self.entry_is_valid(i):
+            if trade_status == '' and row.trade_status == TradeStatuses.EnterLong:
 
                 # Progress Bar at Console
                 self.update_progress_dots()
@@ -184,7 +189,7 @@ class BaseStrategy(ABC):
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
                 staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
-                self.df.iloc[i, fee_col_index] += entry_fee
+                self.df.iloc[i, entry_fee_col_index] += entry_fee
                 self.stats.total_fees_paid += entry_fee
                 # Update staked and account_balance
                 if entry_fee < 0:  # Negative fee = credit/refund
@@ -193,44 +198,11 @@ class BaseStrategy(ABC):
                 else:
                     account_balance -= (staked_amount + entry_fee)
 
-                # # We exit in the same candle we entered, hit stop loss
-                # if row.low <= stop_loss:
-                #     loss = staked_amount * self.SL_PCT * -1
-                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
-                #     self.df.iloc[i, losses_col_index] = loss
-                #     self.stats.total_losses += loss
-                #     trade_status = ''
-                #     self.stats.nb_losses += 1
-                #     # Exit Fee 'loss'
-                #     exit_fee = self.get_stop_loss_fee(staked_amount - loss)
-                #     self.df.iloc[i, fee_col_index] += exit_fee
-                #     self.stats.total_fees_paid += exit_fee
-                #     # Update staked and account_balance
-                #     account_balance += staked_amount + loss - exit_fee
-                #     staked_amount = 0.0
-                #
-                # # We exit in the same candle we entered, take profit
-                # elif row.high >= take_profit:
-                #     win = staked_amount * self.TP_PCT
-                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitLong
-                #     self.df.iloc[i, wins_col_index] = win
-                #     self.stats.total_wins += win
-                #     trade_status = ''
-                #     self.stats.nb_wins += 1
-                #     # Exit Fee 'win'
-                #     exit_fee = self.get_take_profit_fee(staked_amount + win)
-                #     self.df.iloc[i, fee_col_index] += exit_fee
-                #     self.stats.total_fees_paid += exit_fee
-                #     # Update staked and account_balance
-                #     account_balance += staked_amount + win - exit_fee
-                #     staked_amount = 0.0
-                #
-                #
-                # else:
-                # We just entered TradeStatuses.EnterLong in this candle so set the status to TradeStatuses.Long
                 trade_status = TradeStatuses.Long
 
-            elif trade_status in [TradeStatuses.Long]:
+            elif (exit_fixed_pct and trade_status == TradeStatuses.Long) or \
+                    (exit_on_entry and trade_status == TradeStatuses.Long and
+                     (pd.isnull(row.trade_status) or (row.trade_status == TradeStatuses.EnterLong))):
                 if row.low <= stop_loss:
                     loss = staked_amount * self.SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitLong
@@ -242,7 +214,7 @@ class BaseStrategy(ABC):
                     self.stats.nb_losses += 1
                     # Exit Fee 'loss'
                     exit_fee = self.get_stop_loss_fee(staked_amount - loss)
-                    self.df.iloc[i, fee_col_index] += exit_fee
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + loss - exit_fee
@@ -258,7 +230,7 @@ class BaseStrategy(ABC):
                     self.stats.nb_wins += 1
                     # Exit Fee 'win'
                     exit_fee = self.get_take_profit_fee(staked_amount + win)
-                    self.df.iloc[i, fee_col_index] += exit_fee
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + win - exit_fee
@@ -269,16 +241,59 @@ class BaseStrategy(ABC):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     trade_status = TradeStatuses.Long
 
-            # elif trade_status in [TradeStatuses.Long] and row.trade_status in [TradeStatuses.EnterLong,
-            #                                                                    TradeStatuses.EnterShort]:
-            #     # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
-            #     # ignore the signal and override the value with TradeStatuses.Long, we are already in a long
-            #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.Long
-            #     self.df.iloc[i, tp_col_index] = take_profit
-            #     self.df.iloc[i, sl_col_index] = stop_loss
+            # If we are in a long and encounter a EnterShort signal, we close the current long and open a short
+            elif exit_on_entry and trade_status == TradeStatuses.Long and row.trade_status == TradeStatuses.EnterShort:
+                # Close a win
+                if row.close >= entry_price:
+                    win = (row.close - entry_price) / entry_price * staked_amount
+                    self.df.iloc[i, wins_col_index] = win
+                    self.stats.total_wins += win
+                    self.stats.nb_wins += 1
+                    # Exit Fee 'win'
+                    exit_fee = self.get_take_profit_fee(staked_amount + win)
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
+                    self.stats.total_fees_paid += exit_fee
+                    # Update staked and account_balance
+                    account_balance += staked_amount + win - exit_fee
+                    staked_amount = 0.0
+                # Close a loss
+                else:
+                    loss = (row.close - entry_price) / entry_price * staked_amount
+                    self.df.iloc[i, losses_col_index] = loss
+                    self.stats.total_losses += loss
+                    self.stats.nb_losses += 1
+                    # Exit Fee 'loss'
+                    exit_fee = self.get_stop_loss_fee(staked_amount - loss)
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
+                    self.stats.total_fees_paid += exit_fee
+                    # Update staked and account_balance
+                    account_balance += staked_amount + loss - exit_fee
+                    staked_amount = 0.0
+
+                # Progress Bar at Console
+                self.update_progress_dots()
+
+                # Enter Short
+                entry_price = row.close
+                # Stop Loss / Take Profit
+                stop_loss = entry_price + (self.SL_PCT * entry_price)
+                take_profit = entry_price - (self.TP_PCT * entry_price)
+                self.df.iloc[i, tp_col_index] = take_profit
+                self.df.iloc[i, sl_col_index] = stop_loss
+                # Entry Fee
+                staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
+                self.df.iloc[i, entry_fee_col_index] += entry_fee
+                self.stats.total_fees_paid += entry_fee
+                # Update staked and account_balance
+                if entry_fee < 0:  # Negative fee = credit/refund
+                    # remove staked amount from balance and add fee credit/refund
+                    account_balance = account_balance - staked_amount - entry_fee
+                else:
+                    account_balance -= (staked_amount + entry_fee)
+                trade_status = TradeStatuses.Short
 
             # ------------------------------- Shorts -------------------------------
-            elif trade_status == '' and row.trade_status == TradeStatuses.EnterShort and self.entry_is_valid(i):
+            elif trade_status == '' and row.trade_status == TradeStatuses.EnterShort:
 
                 # Progress Bar at Console
                 self.update_progress_dots()
@@ -291,7 +306,7 @@ class BaseStrategy(ABC):
                 self.df.iloc[i, sl_col_index] = stop_loss
                 # Entry Fee
                 staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
-                self.df.iloc[i, fee_col_index] += entry_fee
+                self.df.iloc[i, entry_fee_col_index] += entry_fee
                 self.stats.total_fees_paid += entry_fee
                 # Update staked and account_balance
                 if entry_fee < 0:  # Negative fee = credit/refund
@@ -300,44 +315,11 @@ class BaseStrategy(ABC):
                 else:
                     account_balance -= (staked_amount + entry_fee)
 
-                # # We exit in the same candle we entered, hit stop loss
-                # if row.high >= stop_loss:
-                #     loss = staked_amount * self.SL_PCT * -1
-                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
-                #     self.df.iloc[i, losses_col_index] = loss
-                #     self.stats.total_losses += loss
-                #     trade_status = ''
-                #     self.stats.nb_losses += 1
-                #     # Exit Fee 'loss'
-                #     exit_fee = self.get_stop_loss_fee(staked_amount + loss)
-                #     self.df.iloc[i, fee_col_index] += exit_fee
-                #     self.stats.total_fees_paid += exit_fee
-                #     # Update staked and account_balance
-                #     account_balance += staked_amount + loss - exit_fee
-                #     staked_amount = 0.0
-                #
-                # # We exit in the same candle we entered, hit take profit
-                # elif row.low <= take_profit:
-                #     win = staked_amount * self.TP_PCT
-                #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterExitShort
-                #     self.df.iloc[i, wins_col_index] = win
-                #     self.stats.total_wins += win
-                #     trade_status = ''
-                #     self.stats.nb_wins += 1
-                #     # Exit Fee 'win'
-                #     exit_fee = self.get_take_profit_fee(staked_amount - win)
-                #     self.df.iloc[i, fee_col_index] += exit_fee
-                #     self.stats.total_fees_paid += exit_fee
-                #     # Update staked and account_balance
-                #     account_balance += staked_amount + win - exit_fee
-                #     staked_amount = 0.0
-                #
-                #
-                # else:
-                # We just entered TradeStatuses.EnterShort in this candle, so set the status to TradeStatuses.Short
                 trade_status = TradeStatuses.Short
 
-            elif trade_status in [TradeStatuses.Short]:
+            elif (exit_fixed_pct and trade_status == TradeStatuses.Short) or \
+                    (exit_on_entry and trade_status == TradeStatuses.Short and
+                     (pd.isnull(row.trade_status) or row.trade_status == TradeStatuses.EnterShort)):
                 if row.high >= stop_loss:
                     loss = staked_amount * self.SL_PCT * -1
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.ExitShort
@@ -349,7 +331,7 @@ class BaseStrategy(ABC):
                     self.stats.nb_losses += 1
                     # Exit Fee 'loss'
                     exit_fee = self.get_stop_loss_fee(staked_amount + loss)
-                    self.df.iloc[i, fee_col_index] += exit_fee
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + loss - exit_fee
@@ -365,7 +347,7 @@ class BaseStrategy(ABC):
                     self.stats.nb_wins += 1
                     # Exit Fee 'win'
                     exit_fee = self.get_take_profit_fee(staked_amount - win)
-                    self.df.iloc[i, fee_col_index] += exit_fee
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
                     account_balance += staked_amount + win - exit_fee
@@ -376,19 +358,62 @@ class BaseStrategy(ABC):
                     self.df.iloc[i, sl_col_index] = stop_loss
                     trade_status = TradeStatuses.Short
 
-            # elif trade_status in [TradeStatuses.Short] and row.trade_status in [TradeStatuses.EnterLong,
-            #                                                                     TradeStatuses.EnterShort]:
-            #     # If we are in a long and encounter another TradeStatuses.EnterLong or a TradeStatuses.EnterShort
-            #     # ignore the signal and override the value with TradeStatuses.Long, we are already in a short
-            #     self.df.iloc[i, trade_status_col_index] = TradeStatuses.Short
-            #     self.df.iloc[i, tp_col_index] = take_profit
-            #     self.df.iloc[i, sl_col_index] = stop_loss
+            # If we are in a short and encounter a EnterLong signal, we close the current short and open a long
+            elif exit_on_entry and trade_status == TradeStatuses.Short and row.trade_status == TradeStatuses.EnterLong:
+                # Close a win
+                if row.close <= entry_price:
+                    win = (entry_price - row.close) / entry_price * staked_amount
+                    self.df.iloc[i, wins_col_index] = win
+                    self.stats.total_wins += win
+                    self.stats.nb_wins += 1
+                    # Exit Fee 'win'
+                    exit_fee = self.get_take_profit_fee(staked_amount - win)
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
+                    self.stats.total_fees_paid += exit_fee
+                    # Update staked and account_balance
+                    account_balance += staked_amount + win - exit_fee
+                    staked_amount = 0.0
+                # Close a loss
+                else:
+                    loss = (entry_price - row.close) / entry_price * staked_amount
+                    self.df.iloc[i, losses_col_index] = loss
+                    self.stats.total_losses += loss
+                    self.stats.nb_losses += 1
+                    # Exit Fee 'loss'
+                    exit_fee = self.get_stop_loss_fee(staked_amount + loss)
+                    self.df.iloc[i, exit_fee_col_index] += exit_fee
+                    self.stats.total_fees_paid += exit_fee
+                    # Update staked and account_balance
+                    account_balance += staked_amount + loss - exit_fee
+                    staked_amount = 0.0
+
+                # Progress Bar at Console
+                self.update_progress_dots()
+
+                # Enter Long
+                entry_price = row.close
+                # Stop Loss / Take Profit
+                stop_loss = entry_price - (self.SL_PCT * entry_price)
+                take_profit = entry_price + (self.TP_PCT * entry_price)
+                self.df.iloc[i, tp_col_index] = take_profit
+                self.df.iloc[i, sl_col_index] = stop_loss
+                # Entry Fee
+                staked_amount, entry_fee = self.get_stake_and_entry_fee(account_balance)
+                self.df.iloc[i, entry_fee_col_index] += entry_fee
+                self.stats.total_fees_paid += entry_fee
+                # Update staked and account_balance
+                if entry_fee < 0:  # Negative fee = credit/refund
+                    # remove staked amount from balance and add fee credit/refund
+                    account_balance = account_balance - staked_amount - entry_fee
+                else:
+                    account_balance -= (staked_amount + entry_fee)
+                trade_status = TradeStatuses.Long
 
             # Update account_balance running balance
             self.df.iloc[i, account_balance_col_index] = account_balance
 
             if account_balance < 0:
-                print(f"WARNING: ********* Account balance is below zero. balance = {account_balance} *********")
+                print(f"\nWARNING: ********* Account balance is below zero. balance = {account_balance} *********")
 
         print()  # Jump to next line
         return self.df
@@ -468,8 +493,8 @@ class BaseStrategy(ABC):
     def save_stats_to_db(self):
         table_name = 'Test_Results_Statistics'
         stats_df = self.params['Statistics'].iloc[[-1]]
-        now = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current no milliseconds
-        now = datetime.strptime(now, '%Y-%m-%d %H:%M:%S')  # convert str back to datetime
+        now = dt.datetime.now().strftime(constants.DATETIME_FMT)  # Get current no milliseconds
+        now = datetime.strptime(now, constants.DATETIME_FMT)  # convert str back to datetime
 
         # Use: (df.loc[:,'New_Column']='value') or (df = df.assign(New_Column='value'))
         # instead of: df['New_Column']='value' <-- Generates warnings

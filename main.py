@@ -27,9 +27,9 @@ from stats import stats_utils
 
 # Run the backtesting for a specific test case (set of parameters)
 def backtest(params):
-    print(f'==================================================',
+    print(f'====================================================',
           f'TEST #{params["Test_Num"]}',
-          f'==================================================')
+          f'====================================================')
     execution_start = time.time()
     validate_params(params)
     strategy = globals()[params['Strategy']](params)

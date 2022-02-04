@@ -11,7 +11,7 @@ from strategies.BaseStrategy_X import BaseStrategy_X
 from strategies.MACD import MACD
 
 
-# We inherit from EarlyStrategy for the process_trades() method
+# We inherit from BaseStrategy_X for the process_trades_fixed_pct() method
 # We inherit from the parent strategy for the rest.
 class MACD_X(BaseStrategy_X, MACD):
 

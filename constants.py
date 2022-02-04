@@ -1,14 +1,11 @@
 # Location of the config file
 CONFIG_FILE = 'config.json'
 
-# Paths and Folder
-# TEST_CASES_FILE_PATH = 'TestCases.xlsx'  # File containing test cases
-# HISTORICAL_FILES_PATH = 'exchange_data'  # Folder location where to store the exchange's original raw data
-# RESULTS_PATH = 'output_files'  # Folder location where to store the back testing output
-
-# True: Using local PostgreSQL database to store historical candle data
-# False: Getting data directly from exchange's API with limited caching in local files
-# HISTORICAL_DATA_STORED_IN_DB = False
+DATE_FMT = '%Y-%m-%d'
+DATETIME_FMT = '%Y-%m-%d %H:%M:%S'
+DATETIME_FMT_No_S = '%Y-%m-%d %H:%M'
+# Use some_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] to get only 3 digits for ms
+DATETIME_FMT_MS = '%Y-%m-%d %H:%M:%S.%f'
 
 # File Formats
 SUPPORTED_FILE_FORMATS = ['csv', 'xlsx']
@@ -26,6 +23,9 @@ VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h'
 
 # Implemented Strategies
 IMPLEMENTED_STRATEGIES = ['MACD_BB_Freeman', 'MACD', 'MACD_X', 'ScalpEmaRsiAdx', 'ScalpEmaRsiAdx_X']
+
+# Implemented Exit Strategies
+IMPLEMENTED_EXIT_STRATEGIES = ['FixedPCT', 'ExitOnNextEntry']
 
 # JSON configuration schema to validate the config.json file
 CONFIG_SCHEMA = {

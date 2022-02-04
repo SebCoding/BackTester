@@ -14,7 +14,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
         Using EMA RSI ADX Indicators
     """
     # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 60
+    EMA_PERIODS = 50
 
     # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
     # Value should be between 0 and 1
@@ -22,16 +22,16 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 2
-    RSI_MIN_SIGNAL_THRESHOLD = 31
-    RSI_MAX_SIGNAL_THRESHOLD = 69
+    RSI_MIN_SIGNAL_THRESHOLD = 30
+    RSI_MAX_SIGNAL_THRESHOLD = 70
 
     # Trade entry RSI thresholds (by default equal to RSI min/max thresholds)
-    RSI_MIN_ENTRY_THRESHOLD = 55
-    RSI_MAX_ENTRY_THRESHOLD = 45
+    RSI_MIN_ENTRY_THRESHOLD = 30
+    RSI_MAX_ENTRY_THRESHOLD = 70
 
     # Volatility indicator: ADX - Average Directional Index
     ADX_PERIODS = 3
-    ADX_THRESHOLD = 20
+    ADX_THRESHOLD = 30
 
     # Additional filter: wait an extra candle to confirm the direction of the trend
     CONFIRMATION_FILTER = False  # Boolean True/False
@@ -114,19 +114,13 @@ class ScalpEmaRsiAdx(BaseStrategy):
         self.df['signal_offset'] = None
         self.df['trade_status'] = None
 
-        received_long_signal = False
-        received_short_signal = False
-
         close_col_index = self.df.columns.get_loc("close")
         high_col_index = self.df.columns.get_loc("high")
         low_col_index = self.df.columns.get_loc("low")
+        signal_col_index = self.df.columns.get_loc("signal")
         signal_offset_col_index = self.df.columns.get_loc("signal_offset")
         trade_status_col_index = self.df.columns.get_loc("trade_status")
-        ema_col_index = self.df.columns.get_loc(self.ema_col_name)
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
-        adx_col_index = self.df.columns.get_loc(self.adx_col_name)
-        ema_long_col_index = self.df.columns.get_loc('EMA_LONG')
-        ema_short_col_index = self.df.columns.get_loc('EMA_SHORT')
 
         # Index limit that can be used when the CONFIRMATION_FILTER is True
         i_max_condition_filter = len(self.df.index) - 1
@@ -138,60 +132,35 @@ class ScalpEmaRsiAdx(BaseStrategy):
         offset = self.MIN_DATA_SIZE - 1
         for i, row in enumerate(self.df.iloc[offset:, :].itertuples(index=True), 0):
             i += offset
-            # if we receive another signal while we are not done processing the prior one,
-            # we ignore the new ones until the old one is processed
-            if row.signal == 1 and not received_long_signal and not received_short_signal:
-                received_long_signal = True
-                signal_offset = i
-            elif row.signal == -1 and not received_long_signal and not received_short_signal:
-                received_short_signal = True
-                signal_offset = i
 
             cur_high = self.df.iloc[i, high_col_index]
             cur_low = self.df.iloc[i, low_col_index]
-            cur_close = self.df.iloc[i, close_col_index]
-            cur_ema = self.df.iloc[i, ema_col_index]
             cur_rsi = self.df.iloc[i, rsi_col_index]
-            cur_adx = self.df.iloc[i, adx_col_index]
-            cur_ema_long = self.df.iloc[i, ema_long_col_index]
-            cur_ema_short = self.df.iloc[i, ema_short_col_index]
-
-            # If after receiving a long signal the EMA or ADX are no longer satisfied, cancel signal
-            if received_long_signal and (cur_close < cur_ema_long or cur_adx < self.ADX_THRESHOLD):
-                received_long_signal = False
-                continue
-
-            # If after receiving a short signal the EMA or ADX are no longer satisfied, cancel signal
-            if received_short_signal and (cur_close > cur_ema_short or cur_adx < self.ADX_THRESHOLD):
-                received_short_signal = False
-                continue
+            # signal of prior row
+            prev_signal = self.df.iloc[i-1, signal_col_index]
 
             # RSI exiting oversold area. Long Entry
-            if received_long_signal and cur_rsi > self.RSI_MIN_ENTRY_THRESHOLD:
+            if prev_signal == 1 and cur_rsi > self.RSI_MIN_ENTRY_THRESHOLD:
                 if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
                     # Next candle must close higher than high of current
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close > cur_high:  # confirmation
                         self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterLong
                         self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
-                    received_long_signal = False
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
                     self.df.iloc[i, signal_offset_col_index] = signal_offset - i
-                    received_long_signal = False
             # RSI exiting overbought area. Short Entry
-            elif received_short_signal and cur_rsi < self.RSI_MAX_ENTRY_THRESHOLD:
+            elif prev_signal == -1 and cur_rsi < self.RSI_MAX_ENTRY_THRESHOLD:
                 if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
                     # Next candle must close lower than low of current
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close < cur_low:  # confirmation
                         self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterShort
                         self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
-                    received_short_signal = False
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
                     self.df.iloc[i, signal_offset_col_index] = signal_offset - i
-                    received_short_signal = False
 
     # Check if there is a trade exit between current trade potential entry and signal that generated it.
     # If yes, that means this trade entry has been generated based on a signal that happened during another

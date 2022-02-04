@@ -121,6 +121,8 @@ class MACD_BB_Freeman(BaseStrategy):
 
         # Enter short trade
         self.df.loc[(self.df['CrossUnderUpper'] == 1), 'trade_status'] = TradeStatuses.EnterShort
+
+        self.df.loc[:, 'trade_status2'] = self.df['trade_status']
         
     def clean_df_prior_to_saving(self):
         # Round all values to 2 decimals

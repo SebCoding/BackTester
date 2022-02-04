@@ -4,6 +4,7 @@
 """
 import pandas as pd
 
+import constants
 import utils
 from database.BaseDbData import BaseDbData
 
@@ -24,12 +25,13 @@ class DbDataReader(BaseDbData):
             start_time = from_time
 
         table_name = self.get_table_name(pair, interval)
-        start_time_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
-        from_time_str = from_time.strftime('%Y-%m-%d %H:%M:%S')
-        to_time_str = to_time.strftime('%Y-%m-%d %H:%M:%S')
+        start_time_str = start_time.strftime(constants.DATETIME_FMT)
+        to_time_str = to_time.strftime(constants.DATETIME_FMT)
         query = f"SELECT index, open, high, low, close, volume FROM public.\"{table_name}\" WHERE index BETWEEN TIMESTAMP'{start_time_str}' AND TIMESTAMP'{to_time_str}'"
 
         if verbose:
+            from_time_str = from_time.strftime(constants.DATE_FMT)
+            to_time_str = to_time.strftime(constants.DATE_FMT)
             print(f'Fetching {self.db_name}[{pair}] data from database. Interval [{interval}],',
                   f' From[{from_time_str}], To[{to_time_str}]')
             # print(query)

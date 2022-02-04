@@ -3,6 +3,8 @@ import warnings
 import numpy as np
 import datetime as dt
 
+import pandas as pd
+
 import constants
 from Configuration import Configuration
 from utils import read_excel_to_dataframe
@@ -67,6 +69,9 @@ def validate_params(params):
     if params['Strategy'] not in constants.IMPLEMENTED_STRATEGIES:
         raise Exception(f'Invalid Parameter: Unsupported Strategy = [{params["Strategy"]}]')
 
+    if params['Exit_Strategy'] not in constants.IMPLEMENTED_EXIT_STRATEGIES:
+        raise Exception(f'Invalid Parameter: Unsupported Exit Strategy = [{params["Exit_Strategy"]}]')
+
     # Convert all items to lower case
     formats_list = config['output']['output_file_format']
     if not isinstance(formats_list, list) or \
@@ -77,7 +82,7 @@ def validate_params(params):
 
 
 def load_test_cases_from_file(filename):
-    print(f'Loading test cases from file => [{filename}]')
+    print(f'\nLoading test cases from file => [{filename}]')
 
     # Disable warning because openpyxl issues warnings because the TestCases.xlsx
     # file uses dropdown to enforce integrity of values passed
@@ -89,10 +94,18 @@ def load_test_cases_from_file(filename):
 
     # Adjust column types
     df.index = df.index.astype(int)
+    # Convert datetime to string to print at the console
+    df['From'] = df['From'].apply(lambda x: dt.datetime.strftime(x, constants.DATE_FMT))
+    df['To'] = df['To'].apply(lambda x: dt.datetime.strftime(x, constants.DATE_FMT))
     df['Interval'] = df['Interval'].astype(str)
     df['Initial Capital'] = df['Initial Capital'].astype(float)
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
-    print(df.to_string())
+
+    print('\n'+df.to_string()+'\n')
     # print('\n'+df.to_markdown()+'\n')
+
+    # Convert back to datetime
+    df['From'] = pd.to_datetime(df['From'])
+    df['To'] = pd.to_datetime(df['To'])
     return df
