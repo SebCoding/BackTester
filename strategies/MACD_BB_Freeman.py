@@ -37,7 +37,11 @@ class MACD_BB_Freeman(BaseStrategy):
 
     # Bollinger Bands Mult
     # Number of non-biased standard deviations from the mean
-    BB_MULT = 2.0
+    BB_MULT = 2
+
+    # Volatility indicator: ADX - Average Directional Index
+    ADX_PERIODS = 3
+    ADX_THRESHOLD = 0
 
     def __init__(self, params):
         super().__init__(params)
@@ -46,10 +50,14 @@ class MACD_BB_Freeman(BaseStrategy):
         self.MIN_DATA_SIZE = self.MACD_SLOW_PERIODS + self.BB_PERIODS
         assert(self.MA_CALCULATION_TYPE in self.MA_CALCULATION_TYPE_VALID_VALUES)
 
+        self.up_arrow = u"\u2191"
+        self.down_arrow = u"\u2193"
+
     def get_strategy_text_details(self):
-        details = f'MA_CALC_TYPE({self.MA_CALCULATION_TYPE}), MACD_FAST({self.MACD_FAST_PERIODS}), ' \
-                  f'MACD_SLOW({self.MACD_SLOW_PERIODS}), BB_PERIODS({self.BB_PERIODS}), BB_MULT({self.BB_MULT}), ' \
-                  f'EXIT({self.params["Exit_Strategy"]})'
+        details = f'MovAvg({self.MA_CALCULATION_TYPE}), MACD(fast={self.MACD_FAST_PERIODS}, ' \
+                  f'slow={self.MACD_SLOW_PERIODS}), BB(periods={self.BB_PERIODS}, mult={self.BB_MULT})'
+        details += f', ADX(periods={self.ADX_PERIODS}, threshold={self.ADX_THRESHOLD})' if self.ADX_THRESHOLD > 0 else ''
+        details += f', EXIT({self.params["Exit_Strategy"]})'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
@@ -77,8 +85,13 @@ class MACD_BB_Freeman(BaseStrategy):
                 self.df['MA_Fast'] = talib.LINEARREG(self.df['close'], timeperiod=self.MACD_FAST_PERIODS)
                 self.df['MA_Slow'] = talib.LINEARREG(self.df['close'], timeperiod=self.MACD_SLOW_PERIODS)
 
+        # MACD
         self.df['MACD'] = self.df['MA_Fast'] - self.df['MA_Slow']
 
+        # Volatility Indicator. ADX
+        self.df['ADX'] = talib.ADX(self.df['high'], self.df['low'], self.df['close'], timeperiod=self.ADX_PERIODS)
+
+        # Bollinger Bands
         self.df['BB_Upper'], self.df['BB_Basis'], self.df['BB_Lower'] = \
             talib.BBANDS(
                 self.df['MACD'],
@@ -100,8 +113,8 @@ class MACD_BB_Freeman(BaseStrategy):
 
         # If MACD crosses over BB_Lower: 1
         # If MACD crosses under BB_Lower: -1
-        self.df.loc[:, 'CrossOverLower'] = 0
-        self.df.loc[:, 'CrossOverLower'] = self.df['OverLower'].diff()
+        self.df.loc[:, f'{self.up_arrow} BB Lower'] = 0
+        self.df.loc[:, f'{self.up_arrow} BB Lower'] = self.df['OverLower'].diff()
 
         # If MACD is lower BB_Upper: 1 else 0
         self.df.loc[:, 'LowerUpper'] = 0
@@ -109,20 +122,28 @@ class MACD_BB_Freeman(BaseStrategy):
 
         # If MACD crosses over BB_Upper: -1
         # If MACD crosses under BB_Upper: 1
-        self.df.loc[:, 'CrossUnderUpper'] = 0
-        self.df.loc[:, 'CrossUnderUpper'] = self.df['LowerUpper'].diff()
+        self.df.loc[:, f'{self.down_arrow} BB Upper'] = 0
+        self.df.loc[:, f'{self.down_arrow} BB Upper'] = self.df['LowerUpper'].diff()
 
     # Step 2: Add trade entry points
     # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
     def add_trade_entry_points(self):
         print('Adding entry points for all trades.')
         # Enter long trade
-        self.df.loc[(self.df['CrossOverLower'] == 1), 'trade_status'] = TradeStatuses.EnterLong
+        self.df.loc[
+            (
+                (self.df[f'{self.up_arrow} BB Lower'] == 1) &
+                (self.df['ADX'] > self.ADX_THRESHOLD)
+            ),
+            'trade_status'] = TradeStatuses.EnterLong
 
         # Enter short trade
-        self.df.loc[(self.df['CrossUnderUpper'] == 1), 'trade_status'] = TradeStatuses.EnterShort
-
-        self.df.loc[:, 'trade_status2'] = self.df['trade_status']
+        self.df.loc[
+            (
+                (self.df[f'{self.down_arrow} BB Upper'] == 1) &
+                (self.df['ADX'] > self.ADX_THRESHOLD)
+            ),
+            'trade_status'] = TradeStatuses.EnterShort
         
     def clean_df_prior_to_saving(self):
         # Round all values to 2 decimals
@@ -133,7 +154,7 @@ class MACD_BB_Freeman(BaseStrategy):
         self.df.drop(['OverLower', 'LowerUpper', 'BB_Basis'], axis=1, inplace=True)
 
         # Remove rows with nulls entries for indicators
-        self.df = self.df.dropna(subset=['CrossUnderUpper'])
+        self.df = self.df.dropna(subset=[f'{self.down_arrow} BB Upper'])
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
