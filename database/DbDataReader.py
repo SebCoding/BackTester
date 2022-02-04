@@ -27,7 +27,8 @@ class DbDataReader(BaseDbData):
         table_name = self.get_table_name(pair, interval)
         start_time_str = start_time.strftime(constants.DATETIME_FMT)
         to_time_str = to_time.strftime(constants.DATETIME_FMT)
-        query = f"SELECT index, open, high, low, close, volume FROM public.\"{table_name}\" WHERE index BETWEEN TIMESTAMP'{start_time_str}' AND TIMESTAMP'{to_time_str}'"
+        query = f"SELECT index, open, high, low, close, volume FROM public.\"{table_name}\"  " \
+                f"WHERE index BETWEEN TIMESTAMP'{start_time_str}' AND TIMESTAMP'{to_time_str}' ORDER BY index ASC"
 
         if verbose:
             from_time_str = from_time.strftime(constants.DATE_FMT)
