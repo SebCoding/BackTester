@@ -57,11 +57,20 @@ class MACD_BB_Freeman(BaseStrategy):
         self.down_arrow = u"\u2193"
 
         # Option1 in parameters overrides MA_CALCULATION_TYPE if it exists
-        if self.params['Option1'] in self.MA_CALCULATION_TYPE_VALID_VALUES:
-            self.MA_CALCULATION_TYPE = self.params['Option1']
-        else:
-            print(f"Invalid value ({self.params['Option1']}) used as Option1 in the TestCases file.")
-            sys.exit(1)
+        if self.params['Option1']:
+            if self.params['Option1'] in self.MA_CALCULATION_TYPE_VALID_VALUES:
+                self.MA_CALCULATION_TYPE = self.params['Option1']
+            else:
+                print(f"Invalid value ({self.params['Option1']}) used as Option1 in the TestCases file.")
+                sys.exit(1)
+
+        # Option2 in parameters overrides ADX_THRESHOLD if it exists
+        if self.params['Option2']:
+            try:
+                self.ADX_THRESHOLD = int(self.params['Option2'])
+            except ValueError:
+                print(f"Invalid value ({self.params['Option2']}) used as Option2 in the TestCases file.")
+                sys.exit(1)
 
     def get_strategy_text_details(self):
         details = f'MovAvg({self.MA_CALCULATION_TYPE}), MACD(fast={self.MACD_FAST_PERIODS}, ' \

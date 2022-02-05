@@ -94,7 +94,8 @@ def load_test_cases_from_file(filename):
 
     # Adjust column types
     df.index = df.index.astype(int)
-    # Convert datetime to string to print at the console
+    df['From'] = df['From'].astype('datetime64[ns]')
+    df['To'] = df['To'].astype('datetime64[ns]')
     df['Interval'] = df['Interval'].astype(str)
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
