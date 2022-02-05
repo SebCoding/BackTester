@@ -109,7 +109,7 @@ def load_test_cases_from_file(filename):
         del print_df["Option1"]
     if print_df['Option2'].notnull().sum() == 0:
         del print_df["Option2"]
-    print('\n'+print_df.to_string()+'\n')
+    print('\n'+print_df.to_string(col_space={'Interval': 9, 'Exit_Strategy': 15})+'\n')
     # print('\n'+df.to_markdown()+'\n')
 
     return df

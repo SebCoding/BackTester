@@ -89,6 +89,7 @@ def main():
         print(f'Stats file created => [{filename}]')
 
     # Display Results DataFrame to Console
+    # print(statistics_df.to_string())
     print(statistics_df.to_markdown())
 
 

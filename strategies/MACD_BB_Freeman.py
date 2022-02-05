@@ -75,8 +75,9 @@ class MACD_BB_Freeman(BaseStrategy):
     def get_strategy_text_details(self):
         details = f'MovAvg({self.MA_CALCULATION_TYPE}), MACD(fast={self.MACD_FAST_PERIODS}, ' \
                   f'slow={self.MACD_SLOW_PERIODS}), BB(periods={self.BB_PERIODS}, mult={self.BB_MULT})'
-        details += f', ADX(periods={self.ADX_PERIODS}, threshold={self.ADX_THRESHOLD})' if self.ADX_THRESHOLD > 0 else ''
-        details += f', EXIT({self.params["Exit_Strategy"]})'
+        if self.ADX_THRESHOLD > 0:
+            details += f', ADX(periods={self.ADX_PERIODS}, threshold={self.ADX_THRESHOLD})'
+        details += f", Exit({self.params['Exit_Strategy']}), Entry_As_Maker({self.config['trades']['entry_as_maker']})"
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals

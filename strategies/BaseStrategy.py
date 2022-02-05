@@ -94,6 +94,12 @@ class BaseStrategy(ABC):
     def get_stop_loss_fee(self, trade_amount):
         return float(trade_amount) * self.TAKER_FEE_PCT
 
+    def get_exit_fee(self, trade_amount):
+        if self.ENTRY_AS_MAKER:
+            return float(trade_amount) * self.MAKER_FEE_PCT
+        else:
+            return float(trade_amount) * self.TAKER_FEE_PCT
+
     def get_stake_and_entry_fee(self, amount):
         staked_amount = amount * self.TRADABLE_BALANCE_RATIO
         if self.ENTRY_AS_MAKER:
@@ -250,7 +256,7 @@ class BaseStrategy(ABC):
                     self.stats.total_wins += win
                     self.stats.nb_wins += 1
                     # Exit Fee 'win'
-                    exit_fee = self.get_take_profit_fee(staked_amount + win)
+                    exit_fee = self.get_exit_fee(staked_amount + win)
                     self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
@@ -263,7 +269,7 @@ class BaseStrategy(ABC):
                     self.stats.total_losses += loss
                     self.stats.nb_losses += 1
                     # Exit Fee 'loss'
-                    exit_fee = self.get_stop_loss_fee(staked_amount - loss)
+                    exit_fee = self.get_exit_fee(staked_amount - loss)
                     self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
@@ -367,7 +373,7 @@ class BaseStrategy(ABC):
                     self.stats.total_wins += win
                     self.stats.nb_wins += 1
                     # Exit Fee 'win'
-                    exit_fee = self.get_take_profit_fee(staked_amount - win)
+                    exit_fee = self.get_exit_fee(staked_amount - win)
                     self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance
@@ -380,7 +386,7 @@ class BaseStrategy(ABC):
                     self.stats.total_losses += loss
                     self.stats.nb_losses += 1
                     # Exit Fee 'loss'
-                    exit_fee = self.get_stop_loss_fee(staked_amount + loss)
+                    exit_fee = self.get_exit_fee(staked_amount + loss)
                     self.df.iloc[i, exit_fee_col_index] += exit_fee
                     self.stats.total_fees_paid += exit_fee
                     # Update staked and account_balance

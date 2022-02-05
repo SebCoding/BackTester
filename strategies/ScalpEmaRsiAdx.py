@@ -22,8 +22,8 @@ class ScalpEmaRsiAdx(BaseStrategy):
 
     # Momentum indicator: RSI - Relative Strength Index
     RSI_PERIODS = 2
-    RSI_MIN_SIGNAL_THRESHOLD = 30
-    RSI_MAX_SIGNAL_THRESHOLD = 70
+    RSI_MIN_SIGNAL_THRESHOLD = 20
+    RSI_MAX_SIGNAL_THRESHOLD = 80
 
     # Trade entry RSI thresholds (by default equal to RSI min/max thresholds)
     RSI_MIN_ENTRY_THRESHOLD = 30
@@ -57,7 +57,7 @@ class ScalpEmaRsiAdx(BaseStrategy):
                   f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
                   f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
                   f'ADX({self.ADX_PERIODS}), ADX_THRESHOLD({self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
-                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER}), EXIT({self.params["Exit_Strategy"]})'
+                  f'Entry_As_Maker({self.ENTRY_AS_MAKER}), Exit({self.params["Exit_Strategy"]})'
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
