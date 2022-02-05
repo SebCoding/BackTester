@@ -39,9 +39,10 @@ CONFIG_SCHEMA = {
             'type': 'object',
             'properties': {
                 'tradable_ratio': {'type': 'number', 'exclusiveMinimum': 0, 'maximum': 1.0},
-                'entry_as_maker': {'type': 'boolean', 'default': False}
+                'entry_as_maker': {'type': 'boolean', 'default': False},
+                'initial_capital': {'type': 'number', 'exclusiveMinimum': 0},
             },
-            'required': ['tradable_ratio', 'entry_as_maker']
+            'required': ['tradable_ratio', 'entry_as_maker', 'initial_capital']
         },
         'output': {
             'type': 'object',

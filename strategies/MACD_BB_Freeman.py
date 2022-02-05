@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import talib
 
@@ -46,12 +48,20 @@ class MACD_BB_Freeman(BaseStrategy):
     def __init__(self, params):
         super().__init__(params)
         self.NAME = self.__class__.__name__
+
         # Slow MA needs to be calculated first to then calculate BB
         self.MIN_DATA_SIZE = self.MACD_SLOW_PERIODS + self.BB_PERIODS
         assert(self.MA_CALCULATION_TYPE in self.MA_CALCULATION_TYPE_VALID_VALUES)
 
         self.up_arrow = u"\u2191"
         self.down_arrow = u"\u2193"
+
+        # Option1 in parameters overrides MA_CALCULATION_TYPE if it exists
+        if self.params['Option1'] in self.MA_CALCULATION_TYPE_VALID_VALUES:
+            self.MA_CALCULATION_TYPE = self.params['Option1']
+        else:
+            print(f"Invalid value ({self.params['Option1']}) used as Option1 in the TestCases file.")
+            sys.exit(1)
 
     def get_strategy_text_details(self):
         details = f'MovAvg({self.MA_CALCULATION_TYPE}), MACD(fast={self.MACD_FAST_PERIODS}, ' \

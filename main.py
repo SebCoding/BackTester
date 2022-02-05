@@ -60,11 +60,13 @@ def main():
             , 'From_Time': row.From
             , 'To_Time': row.To
             , 'Interval': row.Interval
-            , 'Initial_Capital': row['Initial Capital']
+            , 'Initial_Capital': float(config['trades']['initial_capital'])
             , 'Take_Profit_PCT': row['TP %']
             , 'Stop_Loss_PCT': row['SL %']
             , 'Strategy': row['Strategy']
             , 'Exit_Strategy': row['Exit_Strategy']
+            , 'Option1': row['Option1']
+            , 'Option2': row['Option2']
             , 'Statistics': statistics_df
         }
 

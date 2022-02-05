@@ -90,22 +90,25 @@ def load_test_cases_from_file(filename):
     df = read_excel_to_dataframe(filename)
     warnings.simplefilter("default", UserWarning)
 
-    df.dropna(inplace=True)
+    df.dropna(subset=['Exchange'], inplace=True)
 
     # Adjust column types
     df.index = df.index.astype(int)
     # Convert datetime to string to print at the console
-    df['From'] = df['From'].apply(lambda x: dt.datetime.strftime(x, constants.DATE_FMT))
-    df['To'] = df['To'].apply(lambda x: dt.datetime.strftime(x, constants.DATE_FMT))
     df['Interval'] = df['Interval'].astype(str)
-    df['Initial Capital'] = df['Initial Capital'].astype(float)
     df['TP %'] = df['TP %'].astype(float)
     df['SL %'] = df['SL %'].astype(float)
 
-    print('\n'+df.to_string()+'\n')
+    print_df = df.copy()
+    print_df['From'] = print_df['From'].apply(lambda x: dt.datetime.strftime(x, constants.DATE_FMT))
+    print_df['To'] = print_df['To'].apply(lambda x: dt.datetime.strftime(x, constants.DATE_FMT))
+
+    # Do not print options columns if they are empty
+    if print_df['Option1'].notnull().sum() == 0:
+        del print_df["Option1"]
+    if print_df['Option2'].notnull().sum() == 0:
+        del print_df["Option2"]
+    print('\n'+print_df.to_string()+'\n')
     # print('\n'+df.to_markdown()+'\n')
 
-    # Convert back to datetime
-    df['From'] = pd.to_datetime(df['From'])
-    df['To'] = pd.to_datetime(df['To'])
     return df
