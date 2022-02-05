@@ -65,8 +65,7 @@ def main():
             , 'Stop_Loss_PCT': row['SL %']
             , 'Strategy': row['Strategy']
             , 'Exit_Strategy': row['Exit_Strategy']
-            , 'Option1': row['Option1']
-            , 'Option2': row['Option2']
+            , 'StrategySettings': row['Optional Strategy Settings']
             , 'Statistics': statistics_df
         }
 

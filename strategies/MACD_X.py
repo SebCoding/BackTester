@@ -58,9 +58,9 @@ class MACD_X(BaseStrategy_X, MACD):
             df2 = df2.append(row)
 
             macd, macdsignal, macdhist = talib.MACD(df2['close'],
-                                                    fastperiod=self.MACD_FAST_PERIOD,
-                                                    slowperiod=self.MACD_SLOW_PERIOD,
-                                                    signalperiod=self.MACD_SIGNAL_PERIOD)
+                                                    fastperiod=self.MACD_FAST,
+                                                    slowperiod=self.MACD_SLOW,
+                                                    signalperiod=self.MACD_SIGNAL)
             df2['MACD'] = macd
             df2['MACDSIG'] = macdsignal
 

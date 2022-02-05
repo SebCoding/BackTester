@@ -23,16 +23,16 @@ class MACD_BB_Freeman(BaseStrategy):
         Bollinger Bands: Bollinger Bands are envelopes plotted at a standard deviation level above and below
                          a simple moving average of the price.
     """
-    MA_CALCULATION_TYPE_VALID_VALUES = ['SMA', 'EMA', 'WMA', 'Linear']
+    MA_CALCULATION_TYPE_VALUES = ['SMA', 'EMA', 'WMA', 'Linear']
 
     # Type of moving average used internally for the MACD calculation
     # Possible values: 'SMA', 'EMA', 'WMA', 'Linear'
-    MA_CALCULATION_TYPE = 'WMA'
+    MA_TYPE = 'WMA'
 
     # Trend following momentum indicator:
     # MACD - Moving Average Convergence Divergence
-    MACD_FAST_PERIODS = 2
-    MACD_SLOW_PERIODS = 11
+    MACD_FAST = 2
+    MACD_SLOW = 11
 
     # Bollinger Bands calculated on the MACD value
     BB_PERIODS = 40
@@ -42,7 +42,7 @@ class MACD_BB_Freeman(BaseStrategy):
     BB_MULT = 2
 
     # Volatility indicator: ADX - Average Directional Index
-    ADX_PERIODS = 3
+    ADX = 3
     ADX_THRESHOLD = 0
 
     def __init__(self, params):
@@ -50,33 +50,62 @@ class MACD_BB_Freeman(BaseStrategy):
         self.NAME = self.__class__.__name__
 
         # Slow MA needs to be calculated first to then calculate BB
-        self.MIN_DATA_SIZE = self.MACD_SLOW_PERIODS + self.BB_PERIODS
-        assert(self.MA_CALCULATION_TYPE in self.MA_CALCULATION_TYPE_VALID_VALUES)
+        self.MIN_DATA_SIZE = self.MACD_SLOW + self.BB_PERIODS
+        assert(self.MA_TYPE in self.MA_CALCULATION_TYPE_VALUES)
 
         self.up_arrow = u"\u2191"
         self.down_arrow = u"\u2193"
 
-        # Option1 in parameters overrides MA_CALCULATION_TYPE if it exists
-        if self.params['Option1']:
-            if self.params['Option1'] in self.MA_CALCULATION_TYPE_VALID_VALUES:
-                self.MA_CALCULATION_TYPE = self.params['Option1']
-            else:
-                print(f"Invalid value ({self.params['Option1']}) used as Option1 in the TestCases file.")
-                sys.exit(1)
+        self.decode_param_settings()
 
-        # Option2 in parameters overrides ADX_THRESHOLD if it exists
-        if self.params['Option2']:
+    def decode_param_settings(self):
+        """
+            Expected dictionary format:
+            {
+                "MA_TYPE": "SMA",
+                "MACD_FAST": 2,
+                "MACD_SLOW": 11,
+                "BB_PERIODS": 40,
+                "BB_MULT": 2,
+                "ADX": 3,
+                "ADX_THRESHOLD": 30
+            }
+        """
+        valid_keys = ['MA_TYPE', 'MACD_FAST', 'MACD_SLOW', 'BB_PERIODS', 'BB_MULT', 'ADX', 'ADX_THRESHOLD']
+        settings = self.params['StrategySettings']
+        if settings:
+            # Validate that all keys are valid
+            for k in settings.keys():
+                if k not in valid_keys:
+                    print(f'Invalid key [{k}] in strategy settings dictionary.')
+                    sys.exit(1)
             try:
-                self.ADX_THRESHOLD = int(self.params['Option2'])
-            except ValueError:
-                print(f"Invalid value ({self.params['Option2']}) used as Option2 in the TestCases file.")
-                sys.exit(1)
+                if settings['MA_TYPE']:
+                    if settings['MA_TYPE'] not in self.MA_CALCULATION_TYPE_VALUES:
+                        print(f"Invalid MA_TYPE: {settings['MA_TYPE']}")
+                        raise ValueError
+                    self.MA_TYPE = str(settings['MA_TYPE'])
+                if settings['MACD_FAST']:
+                    self.MACD_FAST = int(settings['MACD_FAST'])
+                if settings['MACD_SLOW']:
+                    self.MACD_SLOW = int(settings['MACD_SLOW'])
+                if settings['BB_PERIODS']:
+                    self.BB_PERIODS = int(settings['BB_PERIODS'])
+                if settings['BB_MULT']:
+                    self.BB_MULT = int(settings['BB_MULT'])
+                if settings['ADX']:
+                    self.ADX = int(settings['ADX'])
+                if settings['ADX_THRESHOLD']:
+                    self.ADX_THRESHOLD = int(settings['ADX_THRESHOLD'])
+            except ValueError as e:
+                print(f"Invalid value found in Strategy Settings Dictionary: {self.params['StrategySettings']}")
+                raise e
 
     def get_strategy_text_details(self):
-        details = f'MovAvg({self.MA_CALCULATION_TYPE}), MACD(fast={self.MACD_FAST_PERIODS}, ' \
-                  f'slow={self.MACD_SLOW_PERIODS}), BB(periods={self.BB_PERIODS}, mult={self.BB_MULT})'
+        details = f'MovAvg({self.MA_TYPE}), MACD(fast={self.MACD_FAST}, ' \
+                  f'slow={self.MACD_SLOW}), BB(periods={self.BB_PERIODS}, mult={self.BB_MULT})'
         if self.ADX_THRESHOLD > 0:
-            details += f', ADX(periods={self.ADX_PERIODS}, threshold={self.ADX_THRESHOLD})'
+            details += f', ADX(periods={self.ADX}, threshold={self.ADX_THRESHOLD})'
         details += f", Exit({self.params['Exit_Strategy']}), Entry_As_Maker({self.config['trades']['entry_as_maker']})"
         return details
 
@@ -91,25 +120,25 @@ class MACD_BB_Freeman(BaseStrategy):
         self.df['close'] = self.df['close'].astype(float)
         self.df['volume'] = self.df['volume'].astype(float)
 
-        match self.MA_CALCULATION_TYPE:
+        match self.MA_TYPE:
             case 'SMA':
-                self.df['MA_Fast'] = talib.SMA(self.df['close'], timeperiod=self.MACD_FAST_PERIODS)
-                self.df['MA_Slow'] = talib.SMA(self.df['close'], timeperiod=self.MACD_SLOW_PERIODS)
+                self.df['MA_Fast'] = talib.SMA(self.df['close'], timeperiod=self.MACD_FAST)
+                self.df['MA_Slow'] = talib.SMA(self.df['close'], timeperiod=self.MACD_SLOW)
             case 'EMA':
-                self.df['MA_Fast'] = talib.EMA(self.df['close'], timeperiod=self.MACD_FAST_PERIODS)
-                self.df['MA_Slow'] = talib.EMA(self.df['close'], timeperiod=self.MACD_SLOW_PERIODS)
+                self.df['MA_Fast'] = talib.EMA(self.df['close'], timeperiod=self.MACD_FAST)
+                self.df['MA_Slow'] = talib.EMA(self.df['close'], timeperiod=self.MACD_SLOW)
             case 'WMA':
-                self.df['MA_Fast'] = talib.WMA(self.df['close'], timeperiod=self.MACD_FAST_PERIODS)
-                self.df['MA_Slow'] = talib.WMA(self.df['close'], timeperiod=self.MACD_SLOW_PERIODS)
+                self.df['MA_Fast'] = talib.WMA(self.df['close'], timeperiod=self.MACD_FAST)
+                self.df['MA_Slow'] = talib.WMA(self.df['close'], timeperiod=self.MACD_SLOW)
             case 'Linear':
-                self.df['MA_Fast'] = talib.LINEARREG(self.df['close'], timeperiod=self.MACD_FAST_PERIODS)
-                self.df['MA_Slow'] = talib.LINEARREG(self.df['close'], timeperiod=self.MACD_SLOW_PERIODS)
+                self.df['MA_Fast'] = talib.LINEARREG(self.df['close'], timeperiod=self.MACD_FAST)
+                self.df['MA_Slow'] = talib.LINEARREG(self.df['close'], timeperiod=self.MACD_SLOW)
 
         # MACD
         self.df['MACD'] = self.df['MA_Fast'] - self.df['MA_Slow']
 
         # Volatility Indicator. ADX
-        self.df['ADX'] = talib.ADX(self.df['high'], self.df['low'], self.df['close'], timeperiod=self.ADX_PERIODS)
+        self.df['ADX'] = talib.ADX(self.df['high'], self.df['low'], self.df['close'], timeperiod=self.ADX)
 
         # Bollinger Bands
         self.df['BB_Upper'], self.df['BB_Basis'], self.df['BB_Lower'] = \

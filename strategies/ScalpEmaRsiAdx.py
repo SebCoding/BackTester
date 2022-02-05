@@ -1,4 +1,5 @@
 import datetime
+import sys
 
 import numpy as np
 import talib
@@ -14,49 +15,100 @@ class ScalpEmaRsiAdx(BaseStrategy):
         Using EMA RSI ADX Indicators
     """
     # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 50
+    EMA = 50
 
     # % over/under the EMA that can be tolerated to determine if the long/short trade can be placed
     # Value should be between 0 and 1
     EMA_TOLERANCE = 0.0
 
     # Momentum indicator: RSI - Relative Strength Index
-    RSI_PERIODS = 2
-    RSI_MIN_SIGNAL_THRESHOLD = 20
-    RSI_MAX_SIGNAL_THRESHOLD = 80
+    RSI = 2
+    RSI_MIN_SIGNAL = 20
+    RSI_MAX_SIGNAL = 80
 
     # Trade entry RSI thresholds (by default equal to RSI min/max thresholds)
-    RSI_MIN_ENTRY_THRESHOLD = 30
-    RSI_MAX_ENTRY_THRESHOLD = 70
+    RSI_MIN_ENTRY = 30
+    RSI_MAX_ENTRY = 70
 
     # Volatility indicator: ADX - Average Directional Index
-    ADX_PERIODS = 3
+    ADX = 3
     ADX_THRESHOLD = 30
 
     # Additional filter: wait an extra candle to confirm the direction of the trend
-    CONFIRMATION_FILTER = False  # Boolean True/False
+    CONFIRM_FILTER = False  # Boolean True/False
 
     # Cannot run Strategy on data set less than this value
-    MIN_DATA_SIZE = EMA_PERIODS
+    MIN_DATA_SIZE = EMA
 
     # Indicator column names
-    ema_col_name = 'EMA' + str(EMA_PERIODS)
-    rsi_col_name = 'RSI' + str(RSI_PERIODS)
-    adx_col_name = 'ADX' + str(ADX_PERIODS)
+    ema_col_name = 'EMA' + str(EMA)
+    rsi_col_name = 'RSI' + str(RSI)
+    adx_col_name = 'ADX' + str(ADX)
 
     def __init__(self, params):
         super().__init__(params)
         self.NAME = self.__class__.__name__
+        self.decode_param_settings()
+
+    def decode_param_settings(self):
+        """
+            Expected dictionary format:
+            {
+                "EMA": 50,
+                "EMA_TOLERANCE": 0,
+                "RSI": 2,
+                "RSI_MIN_SIGNAL": 20,
+                "RSI_MAX_SIGNAL": 80,
+                "RSI_MIN_ENTRY": 30,
+                "RSI_MAX_ENTRY": 70,
+                "ADX": 2,
+                "ADX_THRESHOLD": 30,
+                "CONFIRM_FILTER": False
+            }
+        """
+        valid_keys = ['EMA', 'EMA_TOLERANCE', 'RSI', 'RSI_MIN_SIGNAL', 'RSI_MAX_SIGNAL',
+                      'RSI_MIN_ENTRY', 'RSI_MAX_ENTRY', 'ADX', 'ADX_THRESHOLD', 'CONFIRM_FILTER']
+        settings = self.params['StrategySettings']
+        if settings:
+            # Validate that all keys are valid
+            for k in settings.keys():
+                if k not in valid_keys:
+                    print(f'Invalid key [{k}] in strategy settings dictionary.')
+                    sys.exit(1)
+            try:
+                if settings['EMA']:
+                    self.EMA = int(settings['EMA'])
+                if settings['EMA_TOLERANCE']:
+                    self.EMA_TOLERANCE = float(settings['EMA_TOLERANCE'])
+                if settings['RSI']:
+                    self.RSI = int(settings['RSI'])
+                if settings['RSI_MIN_SIGNAL']:
+                    self.RSI_MIN_SIGNAL = int(settings['RSI_MIN_SIGNAL'])
+                if settings['RSI_MAX_SIGNAL']:
+                    self.RSI_MAX_SIGNAL = int(settings['RSI_MAX_SIGNAL'])
+                if settings['RSI_MIN_ENTRY']:
+                    self.RSI_MIN_ENTRY = int(settings['RSI_MIN_ENTRY'])
+                if settings['RSI_MAX_ENTRY']:
+                    self.RSI_MAX_ENTRY = int(settings['RSI_MAX_ENTRY'])
+                if settings['ADX']:
+                    self.ADX = int(settings['ADX'])
+                if settings['ADX_THRESHOLD']:
+                    self.ADX_THRESHOLD = int(settings['ADX_THRESHOLD'])
+                if settings['CONFIRM_FILTER']:
+                    self.CONFIRM_FILTER = bool(settings['CONFIRM_FILTER'])
+            except ValueError as e:
+                print(f"Invalid value found in Strategy Settings Dictionary: {self.params['StrategySettings']}")
+                raise e
 
     def get_strategy_text_details(self):
-        if self.CONFIRMATION_FILTER:
+        if self.CONFIRM_FILTER:
             condition_filter = 'On'
         else:
             condition_filter = 'Off'
-        details = f'EMA({self.EMA_PERIODS}), EMA_TOLERANCE({self.EMA_TOLERANCE}), RSI({self.RSI_PERIODS}), ' \
-                  f'RSI_SIGNAL({self.RSI_MIN_SIGNAL_THRESHOLD}, {self.RSI_MAX_SIGNAL_THRESHOLD}), ' \
-                  f'RSI_ENTRY({self.RSI_MIN_ENTRY_THRESHOLD}, {self.RSI_MAX_ENTRY_THRESHOLD}), ' \
-                  f'ADX({self.ADX_PERIODS}), ADX_THRESHOLD({self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
+        details = f'EMA({self.EMA}), EMA_TOLERANCE({self.EMA_TOLERANCE}), RSI({self.RSI}), ' \
+                  f'RSI_SIGNAL({self.RSI_MIN_SIGNAL}, {self.RSI_MAX_SIGNAL}), ' \
+                  f'RSI_ENTRY({self.RSI_MIN_ENTRY}, {self.RSI_MAX_ENTRY}), ' \
+                  f'ADX({self.ADX}), ADX_THRESHOLD({self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
                   f'Entry_As_Maker({self.ENTRY_AS_MAKER}), Exit({self.params["Exit_Strategy"]})'
         return details
 
@@ -72,14 +124,14 @@ class ScalpEmaRsiAdx(BaseStrategy):
         self.df['volume'] = self.df['volume'].astype(float)
 
         # Trend Indicator. EMA-50
-        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA_PERIODS)
+        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA)
 
         # Momentum Indicator. RSI-3
-        self.df[self.rsi_col_name] = talib.RSI(self.df['close'], timeperiod=self.RSI_PERIODS)
+        self.df[self.rsi_col_name] = talib.RSI(self.df['close'], timeperiod=self.RSI)
 
         # Volatility Indicator. ADX-5
         self.df[self.adx_col_name] = talib.ADX(self.df['high'], self.df['low'], self.df['close'],
-                                               timeperiod=self.ADX_PERIODS)
+                                               timeperiod=self.ADX)
 
     # Step 2: Add trade entry points
     # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
@@ -93,18 +145,18 @@ class ScalpEmaRsiAdx(BaseStrategy):
         # Mark long signals
         self.df.loc[
             (
-                (self.df['close'] > self.df['EMA_LONG']) &  # price > EMA
-                (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL_THRESHOLD) &  # RSI < RSI_MIN_THRESHOLD
-                (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
+                    (self.df['close'] > self.df['EMA_LONG']) &  # price > EMA
+                    (self.df[self.rsi_col_name] < self.RSI_MIN_SIGNAL) &  # RSI < RSI_MIN_THRESHOLD
+                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = 1
 
         # Mark short signals
         self.df.loc[
             (
-                (self.df['close'] < self.df['EMA_SHORT']) &  # price < EMA-50
-                (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL_THRESHOLD) &  # RSI > RSI_MAX_THRESHOLD
-                (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
+                    (self.df['close'] < self.df['EMA_SHORT']) &  # price < EMA-50
+                    (self.df[self.rsi_col_name] > self.RSI_MAX_SIGNAL) &  # RSI > RSI_MAX_THRESHOLD
+                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'signal'] = -1
 
@@ -140,8 +192,8 @@ class ScalpEmaRsiAdx(BaseStrategy):
             prev_signal = self.df.iloc[i-1, signal_col_index]
 
             # RSI exiting oversold area. Long Entry
-            if prev_signal == 1 and cur_rsi > self.RSI_MIN_ENTRY_THRESHOLD:
-                if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
+            if prev_signal == 1 and cur_rsi > self.RSI_MIN_ENTRY:
+                if self.CONFIRM_FILTER and i < i_max_condition_filter:
                     # Next candle must close higher than high of current
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close > cur_high:  # confirmation
@@ -151,8 +203,8 @@ class ScalpEmaRsiAdx(BaseStrategy):
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
                     self.df.iloc[i, signal_offset_col_index] = signal_offset - i
             # RSI exiting overbought area. Short Entry
-            elif prev_signal == -1 and cur_rsi < self.RSI_MAX_ENTRY_THRESHOLD:
-                if self.CONFIRMATION_FILTER and i < i_max_condition_filter:
+            elif prev_signal == -1 and cur_rsi < self.RSI_MAX_ENTRY:
+                if self.CONFIRM_FILTER and i < i_max_condition_filter:
                     # Next candle must close lower than low of current
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close < cur_low:  # confirmation

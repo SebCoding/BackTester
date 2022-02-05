@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import talib
 
@@ -8,28 +10,54 @@ from strategies.BaseStrategy import BaseStrategy
 class MACD(BaseStrategy):
 
     # Trend indicator: EMA - Exponential Moving Average
-    EMA_PERIODS = 200
+    EMA = 200
 
     # Trend following momentum indicator:
     # MACD - Moving Average Convergence Divergence
-    MACD_FAST_PERIOD = 12
-    MACD_SLOW_PERIOD = 26
-    MACD_SIGNAL_PERIOD = 9
+    MACD_FAST = 12
+    MACD_SLOW = 26
+    MACD_SIGNAL = 9
 
     # Cannot run Strategy on data set less than this value
-    MIN_DATA_SIZE = EMA_PERIODS
+    MIN_DATA_SIZE = EMA
 
     # Indicator column names
-    ema_col_name = 'EMA' + str(EMA_PERIODS)
+    ema_col_name = 'EMA' + str(EMA)
 
     def __init__(self, params):
         super().__init__(params)
         self.NAME = self.__class__.__name__
+        self.decode_param_settings()
+
+    def decode_param_settings(self):
+        """
+            Expected dictionary format: {"EMA": 200, "MACD_FAST": 12, "MACD_SLOW": 26, "MACD_SIGNAL": 9}
+        """
+        valid_keys = ['EMA', 'MACD_FAST', 'MACD_SLOW', 'MACD_SIGNAL']
+        settings = self.params['StrategySettings']
+        if settings:
+            # Validate that all keys are valid
+            for k in settings.keys():
+                if k not in valid_keys:
+                    print(f'Invalid key [{k}] in strategy settings dictionary.')
+                    sys.exit(1)
+            try:
+                if settings['EMA']:
+                    self.EMA = int(settings['EMA'])
+                if settings['MACD_FAST']:
+                    self.MACD_FAST = int(settings['MACD_FAST'])
+                if settings['MACD_SLOW']:
+                    self.MACD_SLOW = int(settings['MACD_SLOW'])
+                if settings['MACD_SIGNAL']:
+                    self.MACD_SIGNAL = int(settings['MACD_SIGNAL'])
+            except ValueError as e:
+                print(f"Invalid value found in Strategy Settings Dictionary: {self.params['StrategySettings']}")
+                raise e
 
     def get_strategy_text_details(self):
-        details = f'EMA({self.EMA_PERIODS}), MACD(fast={self.MACD_FAST_PERIOD}, ' \
-                  f'slow={self.MACD_SLOW_PERIOD}, signal={self.MACD_SIGNAL_PERIOD}), ' \
-                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER}, EXIT({self.params["Exit_Strategy"]})'
+        details = f'EMA({self.EMA}), MACD(fast={self.MACD_FAST}, ' \
+                  f'slow={self.MACD_SLOW}, signal={self.MACD_SIGNAL}), ' \
+                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER}), EXIT({self.params["Exit_Strategy"]})'
 
         return details
 
@@ -50,14 +78,14 @@ class MACD(BaseStrategy):
 
         # MACD - Moving Average Convergence/Divergence
         macd, macdsignal, macdhist = talib.MACD(self.df['close'],
-                                                fastperiod=self.MACD_FAST_PERIOD,
-                                                slowperiod=self.MACD_SLOW_PERIOD,
-                                                signalperiod=self.MACD_SIGNAL_PERIOD)
+                                                fastperiod=self.MACD_FAST,
+                                                slowperiod=self.MACD_SLOW,
+                                                signalperiod=self.MACD_SIGNAL)
         self.df['MACD'] = macd
         self.df['MACDSIG'] = macdsignal
 
         # EMA - Exponential Moving Average 200
-        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA_PERIODS)
+        self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA)
 
         # Identify the trend
         # self.df.loc[self.df['close'] > self.df[self.ema_col_name], 'trend'] = 'Up'
