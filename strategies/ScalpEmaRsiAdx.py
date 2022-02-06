@@ -163,21 +163,21 @@ class ScalpEmaRsiAdx(BaseStrategy):
         # self.df.to_excel("out.xlsx", index=True, header=True)
         # print(self.df.to_string())
 
-        self.df['signal_offset'] = None
+        # self.df['signal_offset'] = None
         self.df['trade_status'] = None
 
         close_col_index = self.df.columns.get_loc("close")
         high_col_index = self.df.columns.get_loc("high")
         low_col_index = self.df.columns.get_loc("low")
         signal_col_index = self.df.columns.get_loc("signal")
-        signal_offset_col_index = self.df.columns.get_loc("signal_offset")
+        #signal_offset_col_index = self.df.columns.get_loc("signal_offset")
         trade_status_col_index = self.df.columns.get_loc("trade_status")
         rsi_col_index = self.df.columns.get_loc(self.rsi_col_name)
 
         # Index limit that can be used when the CONFIRMATION_FILTER is True
         i_max_condition_filter = len(self.df.index) - 1
 
-        signal_offset = -1
+        #signal_offset = -1
 
         # Iterate over all data to identify the real trade entry points
         # Skip first 49 lines where EMA50 is null => offset
@@ -198,10 +198,10 @@ class ScalpEmaRsiAdx(BaseStrategy):
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close > cur_high:  # confirmation
                         self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterLong
-                        self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
+                        #self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterLong
-                    self.df.iloc[i, signal_offset_col_index] = signal_offset - i
+                    #self.df.iloc[i, signal_offset_col_index] = signal_offset - i
             # RSI exiting overbought area. Short Entry
             elif prev_signal == -1 and cur_rsi < self.RSI_MAX_ENTRY:
                 if self.CONFIRM_FILTER and i < i_max_condition_filter:
@@ -209,27 +209,27 @@ class ScalpEmaRsiAdx(BaseStrategy):
                     next_close = self.df.iloc[i + 1, close_col_index]
                     if next_close < cur_low:  # confirmation
                         self.df.iloc[i + 1, trade_status_col_index] = TradeStatuses.EnterShort
-                        self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
+                        #self.df.iloc[i + 1, signal_offset_col_index] = signal_offset - i
                 else:
                     self.df.iloc[i, trade_status_col_index] = TradeStatuses.EnterShort
-                    self.df.iloc[i, signal_offset_col_index] = signal_offset - i
+                    #self.df.iloc[i, signal_offset_col_index] = signal_offset - i
 
     # Check if there is a trade exit between current trade potential entry and signal that generated it.
     # If yes, that means this trade entry has been generated based on a signal that happened during another
     # trade and must be ignored
     def entry_is_valid(self, current_index):
-        signal_offset_col_index = self.df.columns.get_loc("signal_offset")
-        trade_status_col_index = self.df.columns.get_loc("trade_status")
-        offset = self.df.iloc[current_index, signal_offset_col_index]
-        exit_statuses = [TradeStatuses.ExitLong, TradeStatuses.ExitShort,
-                         TradeStatuses.EnterExitLong, TradeStatuses.EnterExitShort]
-
-        for i in range(current_index + offset, current_index, 1):
-            if self.df.iloc[i, trade_status_col_index] in exit_statuses:
-                # Erase invalid trade entry
-                self.df.iloc[current_index, trade_status_col_index] = None
-                self.df.iloc[current_index, signal_offset_col_index] = None
-                return False
+        # signal_offset_col_index = self.df.columns.get_loc("signal_offset")
+        # trade_status_col_index = self.df.columns.get_loc("trade_status")
+        # offset = self.df.iloc[current_index, signal_offset_col_index]
+        # exit_statuses = [TradeStatuses.ExitLong, TradeStatuses.ExitShort,
+        #                  TradeStatuses.EnterExitLong, TradeStatuses.EnterExitShort]
+        #
+        # for i in range(current_index + offset, current_index, 1):
+        #     if self.df.iloc[i, trade_status_col_index] in exit_statuses:
+        #         # Erase invalid trade entry
+        #         self.df.iloc[current_index, trade_status_col_index] = None
+        #         self.df.iloc[current_index, signal_offset_col_index] = None
+        #         return False
         return True
 
     def clean_df_prior_to_saving(self):

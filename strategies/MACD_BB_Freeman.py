@@ -178,6 +178,8 @@ class MACD_BB_Freeman(BaseStrategy):
     # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
     def add_trade_entry_points(self):
         print('Adding entry points for all trades.')
+        self.df.loc[:, 'trade_status'] = None
+
         # Enter long trade
         self.df.loc[
             (

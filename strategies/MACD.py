@@ -100,6 +100,8 @@ class MACD(BaseStrategy):
     # Step 2: Identify the trade entries
     def add_trade_entry_points(self):
         print('Adding entry points for all trades.')
+        self.df.loc[:, 'trade_status'] = None
+
         # Enter long trade
         self.df.loc[
             (

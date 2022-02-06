@@ -8,7 +8,6 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 import constants
 
-
 # Adjust from_time to include prior X entries for that interval for ema200
 from Configuration import Configuration
 
@@ -158,3 +157,11 @@ def format_execution_time(seconds):
     if len(output) == 0:
         output = 'less than 1s'
     return output
+
+
+def isNan(value):
+    """
+        The usual way to test for a NaN is to see if it's equal to itself:
+        https://stackoverflow.com/questions/944700/how-can-i-check-for-nan-values
+    """
+    return value != value
