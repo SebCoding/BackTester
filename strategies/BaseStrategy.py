@@ -434,11 +434,14 @@ class BaseStrategy(ABC):
         self.df.loc[:, 'exit_fee'] = 0.0
 
         if self.params['Exit_Strategy'] == 'FixedPCT':
+            self.prev_row = {}  # Clear previous_row
             self.df[['trade_status', 'entry_price', 'take_profit', 'stop_loss']] = \
                 self.df.apply(self._get_trade_details_fixed_pct, axis=1).apply(pd.Series)
+            self.prev_row = {}  # Clear previous_row
             self.df[['wallet', 'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']] = \
                 self.df.apply(self._get_trade_amounts_fixed_pct, axis=1).apply(pd.Series)
         elif self.params['Exit_Strategy'] == 'ExitOnNextEntry':
+            self.prev_row = {}  # Clear previous_row
             self.df[['trade_status', 'entry_price', 'take_profit', 'stop_loss', 'wallet',
                      'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']] = \
                 self.df.apply(self._get_all_trade_details_exit_on_next_entry, axis=1).apply(pd.Series)
