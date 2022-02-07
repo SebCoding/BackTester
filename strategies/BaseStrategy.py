@@ -149,25 +149,7 @@ class BaseStrategy(ABC):
                     f'\nData rows = {len(self.df)}, less than MIN_DATA_SIZE={self.MIN_DATA_SIZE}. Unable to backtest strategy.')
                 raise Exception("Unable to Run Strategy on Data Set")
 
-    def _get_trade_amounts_apply_func_decorator(func):
-        def wrapper(self, curr_row):
-            v1, v2, v3, v4, v5, v6 = func(self, curr_row, self.prev_row)
-            self.prev_row.update(curr_row)
-            self.prev_row['wallet'], self.prev_row['staked_amount'], self.prev_row['win'], self.prev_row['loss'], \
-            self.prev_row['entry_fee'], self.prev_row['exit_fee'] = v1, v2, v3, v4, v5, v6
-            return v1, v2, v3, v4, v5, v6
-        return wrapper
-
-    def _get_trade_details_apply_func_decorator(func):
-        def wrapper(self, curr_row):
-            v1, v2, v3, v4 = func(self, curr_row, self.prev_row)
-            self.prev_row.update(curr_row)
-            self.prev_row['trade_status'], self.prev_row['entry_price'], \
-            self.prev_row['take_profit'], self.prev_row['stop_loss'] = v1, v2, v3, v4
-            return v1, v2, v3, v4
-        return wrapper
-
-    def _get_all_trade_details_func_decorator(func):
+    def get_all_trade_details_decorator(func):
         def wrapper(self, curr_row):
             v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 = func(self, curr_row, self.prev_row)
             self.prev_row.update(curr_row)
@@ -178,107 +160,97 @@ class BaseStrategy(ABC):
             return v1, v2, v3, v4, v5, v6, v7, v8, v9, v10
         return wrapper
 
-    @_get_trade_details_apply_func_decorator
-    def _get_trade_details_fixed_pct(self, curr_row, prev_row):
+    @get_all_trade_details_decorator
+    def get_all_trade_details_fixed_pct(self, curr_row, prev_row):
         """
-            ['trade_status', 'entry_price', 'take_profit', 'stop_loss']
+            ['trade_status', 'entry_price', 'take_profit', 'stop_loss', 'wallet',
+            'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']
         """
         if not prev_row or len(prev_row) == 0:
-            return None, 0, 0, 0
+            return None, 0, 0, 0, float(self.params['Initial_Capital']), 0, 0, 0, 0, 0
 
-        if prev_row['trade_status'] is None and curr_row['trade_status'] is None:
-            return None, 0, 0, 0
-        # Enter Long
+        # Not in a trade
+        elif (prev_row['trade_status'] is None or prev_row['trade_status'] in [TradeStatuses.ExitLong,
+                                                                               TradeStatuses.ExitShort]) \
+                and curr_row['trade_status'] is None:
+            return None, 0, 0, 0, prev_row['wallet'], 0, 0, 0, 0, 0
+
+        # Enter Long, not a reverse
         elif (prev_row['trade_status'] is None or prev_row['trade_status'] in [TradeStatuses.ExitLong,
                                                                                TradeStatuses.ExitShort]) \
                 and curr_row['trade_status'] in [TradeStatuses.EnterLong]:
             take_profit = curr_row['close'] + (self.TP_PCT * curr_row['close'])
             stop_loss = curr_row['close'] - (self.SL_PCT * curr_row['close'])
-            return curr_row['trade_status'], curr_row['close'], take_profit, stop_loss
-        # Enter Short
-        elif (prev_row['trade_status'] is None or prev_row['trade_status'] in [TradeStatuses.ExitLong,
-                                                                               TradeStatuses.ExitShort]) \
-                and curr_row['trade_status'] in [TradeStatuses.EnterShort]:
-            take_profit = curr_row['close'] - (self.TP_PCT * curr_row['close'])
-            stop_loss = curr_row['close'] + (self.SL_PCT * curr_row['close'])
-            return curr_row['trade_status'], curr_row['close'], take_profit, stop_loss
-        # Currently, in Long
-        elif prev_row['trade_status'] in [TradeStatuses.EnterLong, TradeStatuses.Long]:
-            # Exit by stop loss
-            if curr_row['low'] <= prev_row['stop_loss']:
-                return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss']
-            # Exit by take profit
-            elif curr_row['high'] >= prev_row['take_profit']:
-                return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss']
-            else:
-                return TradeStatuses.Long, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss']
-        # Currently, in Short
-        elif prev_row['trade_status'] in [TradeStatuses.EnterShort, TradeStatuses.Short]:
-            # Exit by stop loss
-            if curr_row['high'] >= prev_row['stop_loss']:
-                return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss']
-            # Exit by take profit
-            elif curr_row['low'] <= prev_row['take_profit']:
-                return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss']
-            else:
-                return TradeStatuses.Short, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss']
-        # Prior line was trade exit and current line is not a trade entry
-        # elif prev_row['trade_status'] in [TradeStatuses.ExitLong, TradeStatuses.ExitShort]:
-        return None, 0, 0, 0
-
-    @_get_trade_amounts_apply_func_decorator
-    def _get_trade_amounts_fixed_pct(self, curr_row, prev_row):
-        """
-            ['wallet', 'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']
-        """
-        if not prev_row or len(prev_row) == 0:
-            return float(self.params['Initial_Capital']), 0, 0, 0, 0, 0
-        # Not in a trade
-        if curr_row['trade_status'] is None or utils.isNan(curr_row['trade_status']):
-            return prev_row['wallet'], prev_row['staked_amount'], 0, 0, 0, 0
-        # Trade entry
-        elif curr_row['trade_status'] in [TradeStatuses.EnterLong, TradeStatuses.EnterShort]:
             staked_amount, entry_fee = self.get_stake_and_entry_fee(prev_row['wallet'])
             if entry_fee < 0:  # Negative fee = credit/refund
                 # remove staked amount from balance and add fee credit/refund
                 account_balance = prev_row['wallet'] - staked_amount - entry_fee
             else:
                 account_balance = prev_row['wallet'] - (staked_amount + entry_fee)
-            return account_balance, staked_amount, 0, 0, entry_fee, 0
-        # Currently, in a trade, but not on an exit
-        elif curr_row['trade_status'] in [TradeStatuses.Long, TradeStatuses.Short]:
-            return prev_row['wallet'], prev_row['staked_amount'], 0, 0, 0, 0
-        # Exiting Long
-        elif curr_row['trade_status'] == TradeStatuses.ExitLong:
-            account_balance = win = loss = exit_fee = 0.0
-            # Loss
+            return curr_row['trade_status'], curr_row[
+                'close'], take_profit, stop_loss, account_balance, staked_amount, 0, 0, entry_fee, 0
+
+        # Enter Short, not a reverse
+        elif (prev_row['trade_status'] is None or prev_row['trade_status'] in [TradeStatuses.ExitLong,
+                                                                               TradeStatuses.ExitShort]) \
+                and curr_row['trade_status'] in [TradeStatuses.EnterShort]:
+            take_profit = curr_row['close'] - (self.TP_PCT * curr_row['close'])
+            stop_loss = curr_row['close'] + (self.SL_PCT * curr_row['close'])
+            staked_amount, entry_fee = self.get_stake_and_entry_fee(prev_row['wallet'])
+            if entry_fee < 0:  # Negative fee = credit/refund
+                # remove staked amount from balance and add fee credit/refund
+                account_balance = prev_row['wallet'] - staked_amount - entry_fee
+            else:
+                account_balance = prev_row['wallet'] - (staked_amount + entry_fee)
+            return curr_row['trade_status'], curr_row[
+                'close'], take_profit, stop_loss, account_balance, staked_amount, 0, 0, entry_fee, 0
+
+        # Previous row in a long
+        elif prev_row['trade_status'] in [TradeStatuses.EnterLong, TradeStatuses.Long]:
+            # Exit by stop loss
             if curr_row['low'] <= prev_row['stop_loss']:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] - loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
-            # Win
+                return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
+            # Exit by take profit
             elif curr_row['high'] >= prev_row['take_profit']:
                 win = prev_row['staked_amount'] * self.TP_PCT
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
-            return account_balance, 0, win, loss, 0, exit_fee
-        # Exiting Short
-        elif curr_row['trade_status'] == TradeStatuses.ExitShort:
-            account_balance = win = loss = exit_fee = 0.0
-            # Loss
+                return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, win, 0, 0, exit_fee
+            # Continue long, no event
+            else:
+                return TradeStatuses.Long, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss'], \
+                       prev_row['wallet'], prev_row['staked_amount'], 0, 0, 0, 0
+
+        # Previous row in a short
+        elif prev_row['trade_status'] in [TradeStatuses.EnterShort, TradeStatuses.Short]:
+            # Exit by stop loss
             if curr_row['high'] >= prev_row['stop_loss']:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] + loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
-            # Win
+                return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
+            # Exit by take profit
             elif curr_row['low'] <= prev_row['take_profit']:
                 win = prev_row['staked_amount'] * self.TP_PCT
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
-            return account_balance, 0, win, loss, 0, exit_fee
+                return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, win, 0, 0, exit_fee
+            # Continue long, no event
+            else:
+                return TradeStatuses.Short, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss'], \
+                       prev_row['wallet'], prev_row['staked_amount'], 0, 0, 0, 0
+        else:
+            print("hi")
 
-    @_get_all_trade_details_func_decorator
-    def _get_all_trade_details_exit_on_next_entry(self, curr_row, prev_row):
+    @get_all_trade_details_decorator
+    def get_all_trade_details_exit_on_next_entry(self, curr_row, prev_row):
         """
             ['trade_status', 'entry_price', 'take_profit', 'stop_loss', 'wallet',
             'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']
@@ -434,17 +406,15 @@ class BaseStrategy(ABC):
         self.df.loc[:, 'exit_fee'] = 0.0
 
         if self.params['Exit_Strategy'] == 'FixedPCT':
-            self.prev_row = {}  # Clear previous_row
-            self.df[['trade_status', 'entry_price', 'take_profit', 'stop_loss']] = \
-                self.df.apply(self._get_trade_details_fixed_pct, axis=1).apply(pd.Series)
-            self.prev_row = {}  # Clear previous_row
-            self.df[['wallet', 'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']] = \
-                self.df.apply(self._get_trade_amounts_fixed_pct, axis=1).apply(pd.Series)
-        elif self.params['Exit_Strategy'] == 'ExitOnNextEntry':
-            self.prev_row = {}  # Clear previous_row
+            self.prev_row = {}
             self.df[['trade_status', 'entry_price', 'take_profit', 'stop_loss', 'wallet',
                      'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']] = \
-                self.df.apply(self._get_all_trade_details_exit_on_next_entry, axis=1).apply(pd.Series)
+                self.df.apply(self.get_all_trade_details_fixed_pct, axis=1).apply(pd.Series)
+        elif self.params['Exit_Strategy'] == 'ExitOnNextEntry':
+            self.prev_row = {}
+            self.df[['trade_status', 'entry_price', 'take_profit', 'stop_loss', 'wallet',
+                     'staked_amount', 'win', 'loss', 'entry_fee', 'exit_fee']] = \
+                self.df.apply(self.get_all_trade_details_exit_on_next_entry, axis=1).apply(pd.Series)
         else:
             print(f'Unimplemented exit strategy.')
             sys.exit(1)
