@@ -42,7 +42,7 @@ class Statistics:
 
     total_pl = property(get_total_pl)
 
-    def to_string(self):
+    def print(self):
         total_trades = self.nb_wins + self.nb_losses
         win_rate = (self.nb_wins / total_trades * 100) if total_trades != 0 else 0
         locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
@@ -61,6 +61,7 @@ class Statistics:
         print(f'Total Losses: {locale.currency(self.total_losses, grouping=True)}')
         print(f'Total Fees Paid: {locale.currency(self.total_fees_paid, grouping=True)}')
         print(f'Total P/L: {locale.currency(self.total_pl, grouping=True)}\n')
-        print('-------------------------------------------------------')
-        print(self.details)
-        print('-------------------------------------------------------')
+        if self.details:
+            print('-------------------------------------------------------')
+            print(self.details)
+            print('-------------------------------------------------------')

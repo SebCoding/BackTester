@@ -174,6 +174,9 @@ class MACD_BB_Freeman(BaseStrategy):
         self.df.loc[:, f'{self.down_arrow} BB Upper'] = 0
         self.df.loc[:, f'{self.down_arrow} BB Upper'] = self.df['LowerUpper'].diff()
 
+        # Remove rows with null entries for ↑ BB Lower / ↓ BB Upper
+        self.df = self.df.dropna(subset=[f'{self.down_arrow} BB Upper'])
+
     # Step 2: Add trade entry points
     # When we get a signal, we only enter the trade when the RSI exists the oversold/overbought area
     def add_trade_entry_points(self):
