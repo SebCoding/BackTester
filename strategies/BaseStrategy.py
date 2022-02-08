@@ -746,9 +746,7 @@ class BaseStrategy(ABC):
     def finalize_stats(self):
         # self.stats.max_conseq_wins, self.stats.max_conseq_losses = stats_utils.get_consecutives(self.df)
         self.stats.min_win_loose_index, self.stats.max_win_loose_index = stats_utils.get_win_loss_indexes(self.df)
-        # Store results in Results DataFrame
-        self.params['Statistics'] = self.params['Statistics'].append(
-            {
+        results = {
                 'Test #': self.params['Test_Num'],
                 'Exchange': self.exchange.NAME,
                 'Pair': self.params['Pair'],
@@ -773,9 +771,16 @@ class BaseStrategy(ABC):
                 'Fees $': f'{self.stats.total_fees_paid:,.2f}',
                 'Total P/L': f'{self.stats.total_pl:,.2f}',
                 'Details': self.get_strategy_text_details()
-            },
-            ignore_index=True,
-        )
+            }
+
+        # Store results in Results DataFrame
+        self.params['Statistics'] = self.params['Statistics'].append(results, ignore_index=True)
+
+        df = pd.DataFrame().append([results], ignore_index=True)
+        del df['Init Capital']
+        del df['Details']
+        print('\n'+df.to_string()+'\n')
+
         if self.config['database']['historical_data_stored_in_db']:
             self.save_stats_to_db()
 

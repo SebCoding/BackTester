@@ -105,10 +105,10 @@ class ScalpEmaRsiAdx(BaseStrategy):
             condition_filter = 'On'
         else:
             condition_filter = 'Off'
-        details = f'EMA({self.EMA}), EMA_TOLERANCE({self.EMA_TOLERANCE}), RSI({self.RSI}), ' \
-                  f'RSI_SIGNAL({self.RSI_MIN_SIGNAL}, {self.RSI_MAX_SIGNAL}), ' \
-                  f'RSI_ENTRY({self.RSI_MIN_ENTRY}, {self.RSI_MAX_ENTRY}), ' \
-                  f'ADX({self.ADX}), ADX_THRESHOLD({self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
+        details = f'EMA({self.EMA}, tol={self.EMA_TOLERANCE}), RSI({self.RSI}, ' \
+                  f'signal[{self.RSI_MIN_SIGNAL}, {self.RSI_MAX_SIGNAL}], ' \
+                  f'entry[{self.RSI_MIN_ENTRY}, {self.RSI_MAX_ENTRY}]), ' \
+                  f'ADX({self.ADX}, {self.ADX_THRESHOLD}), Filter({condition_filter}), ' \
                   f'Entry_As_Maker({self.ENTRY_AS_MAKER}), Exit({self.params["Exit_Strategy"]})'
         return details
 
