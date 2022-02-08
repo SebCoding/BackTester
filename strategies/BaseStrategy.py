@@ -247,7 +247,8 @@ class BaseStrategy(ABC):
                 return TradeStatuses.Short, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss'], \
                        prev_row['wallet'], prev_row['staked_amount'], 0, 0, 0, 0
         else:
-            print("hi")
+            print(f' *** unhandled case ***')
+            raise Exception
 
     @get_all_trade_details_decorator
     def get_all_trade_details_exit_on_next_entry(self, curr_row, prev_row):
@@ -388,7 +389,8 @@ class BaseStrategy(ABC):
                 return TradeStatuses.Short, prev_row['entry_price'], prev_row['take_profit'], prev_row['stop_loss'], \
                        prev_row['wallet'], prev_row['staked_amount'], 0, 0, 0, 0
         else:
-            print("hi")
+            print(f' *** unhandled case ***')
+            raise Exception
 
     # Step 3: Mark start, ongoing and end of trades, as well as calculate statistics
     def process_trades(self):
@@ -710,10 +712,7 @@ class BaseStrategy(ABC):
 
     # Step 4: Validate Trades, TP and SL Exits
     def validate_trades(self):
-        trade_status_col_index = self.df.columns.get_loc("trade_status")
-        tp_col_index = self.df.columns.get_loc("take_profit")
-        sl_col_index = self.df.columns.get_loc("stop_loss")
-
+        # Validate TP/SL Exits
         conditions = [
             ((self.df['high'] >= self.df['take_profit'].fillna(0)) & (self.df['trade_status'] == TradeStatuses.Long)),
             ((self.df['low'] <= self.df['stop_loss'].fillna(0)) & (self.df['trade_status'] == TradeStatuses.Long)),
@@ -722,14 +721,14 @@ class BaseStrategy(ABC):
         ]
         choices = ['TP Exit Missed', 'SL Exit Missed', 'TP Exit Missed', 'SL Exit Missed']
 
-        self.df.loc[:, 'Exit Validation'] = np.select(conditions, choices, default=None)
+        self.df.loc[:, 'Errors'] = np.select(conditions, choices, default=None)
 
-        errors_count = self.df['Exit Validation'].notnull().sum()
+        errors_count = self.df['Errors'].notnull().sum()
         if errors_count > 0:
             print(f'\n*** {errors_count} Errors where found related to TP/SL exits. '
-                  f'Check the "Exit Validation" column in the Trades file. ***\n')
+                  f'Check the "Errors" column in the Trades file. ***\n')
         else:
-            self.df.drop(['Exit Validation'], axis=1, inplace=True)
+            self.df.drop(['Errors'], axis=1, inplace=True)
 
     # Step 5: Save trade data to file
     def save_trades_to_file(self):
