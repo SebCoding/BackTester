@@ -779,7 +779,7 @@ class BaseStrategy(ABC):
         df = pd.DataFrame().append([results], ignore_index=True)
         del df['Init Capital']
         del df['Details']
-        print('\n'+df.to_string()+'\n')
+        print('\n'+df.to_string(index=False)+'\n')
 
         if self.config['database']['historical_data_stored_in_db']:
             self.save_stats_to_db()
