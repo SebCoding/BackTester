@@ -116,13 +116,6 @@ class ScalpEmaRsiAdx(BaseStrategy):
     def add_indicators_and_signals(self):
         print('Adding indicators and signals to data.')
 
-        # Set proper data types
-        self.df['open'] = self.df['open'].astype(float)
-        self.df['high'] = self.df['high'].astype(float)
-        self.df['low'] = self.df['low'].astype(float)
-        self.df['close'] = self.df['close'].astype(float)
-        self.df['volume'] = self.df['volume'].astype(float)
-
         # Trend Indicator. EMA-50
         self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA)
 

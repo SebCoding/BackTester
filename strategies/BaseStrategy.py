@@ -149,6 +149,13 @@ class BaseStrategy(ABC):
                     f'\nData rows = {len(self.df)}, less than MIN_DATA_SIZE={self.MIN_DATA_SIZE}. Unable to backtest strategy.')
                 raise Exception("Unable to Run Strategy on Data Set")
 
+        # Set proper data types
+        self.df['open'] = self.df['open'].astype(float)
+        self.df['high'] = self.df['high'].astype(float)
+        self.df['low'] = self.df['low'].astype(float)
+        self.df['close'] = self.df['close'].astype(float)
+        self.df['volume'] = self.df['volume'].astype(float)
+
     def get_all_trade_details_decorator(func):
         def wrapper(self, curr_row):
             v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 = func(self, curr_row, self.prev_row)

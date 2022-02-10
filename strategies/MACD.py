@@ -18,11 +18,17 @@ class MACD(BaseStrategy):
     MACD_SLOW = 26
     MACD_SIGNAL = 9
 
+    # ADX: Average Directional Index
+    # Not initially in this strategy, but added as an optional parameter
+    ADX = 14
+    ADX_THRESHOLD = 0  # set to 0 to disable ADX
+
     # Cannot run Strategy on data set less than this value
     MIN_DATA_SIZE = EMA
 
     # Indicator column names
     ema_col_name = 'EMA' + str(EMA)
+    adx_col_name = 'ADX' + str(ADX)
 
     def __init__(self, params):
         super().__init__(params)
@@ -31,9 +37,10 @@ class MACD(BaseStrategy):
 
     def decode_param_settings(self):
         """
-            Expected dictionary format: {"EMA": 200, "MACD_FAST": 12, "MACD_SLOW": 26, "MACD_SIGNAL": 9}
+            Expected dictionary format: {"EMA": 200, "MACD_FAST": 12, "MACD_SLOW": 26, "MACD_SIGNAL": 9,
+                                         "ADX": 14, "ADX_THRESHOLD": 0}
         """
-        valid_keys = ['EMA', 'MACD_FAST', 'MACD_SLOW', 'MACD_SIGNAL']
+        valid_keys = ['EMA', 'MACD_FAST', 'MACD_SLOW', 'MACD_SIGNAL', 'ADX', 'ADX_THRESHOLD']
         settings = self.params['StrategySettings']
         if settings:
             # Validate that all keys are valid
@@ -50,27 +57,26 @@ class MACD(BaseStrategy):
                     self.MACD_SLOW = int(settings['MACD_SLOW'])
                 if settings['MACD_SIGNAL']:
                     self.MACD_SIGNAL = int(settings['MACD_SIGNAL'])
+                if 'ADX' in settings.keys() and settings['ADX']:
+                    self.ADX = int(settings['ADX'])
+                if 'ADX_THRESHOLD' in settings.keys() and settings['ADX_THRESHOLD']:
+                    self.ADX_THRESHOLD = int(settings['ADX_THRESHOLD'])
             except ValueError as e:
                 print(f"Invalid value found in Strategy Settings Dictionary: {self.params['StrategySettings']}")
                 raise e
 
     def get_strategy_text_details(self):
         details = f'EMA({self.EMA}), MACD(fast={self.MACD_FAST}, ' \
-                  f'slow={self.MACD_SLOW}, signal={self.MACD_SIGNAL}), ' \
-                  f'ENTRY_AS_MAKER({self.ENTRY_AS_MAKER}), EXIT({self.params["Exit_Strategy"]})'
+                  f'slow={self.MACD_SLOW}, signal={self.MACD_SIGNAL}), '
+        if self.ADX_THRESHOLD > 0:
+            details += f'ADX({self.ADX}, {self.ADX_THRESHOLD}), '
+        details += f'Entry_As_Maker({self.ENTRY_AS_MAKER}), Exit({self.params["Exit_Strategy"]})'
 
         return details
 
     # Step 1: Calculate indicator values required to determine long/short signals
     def add_indicators_and_signals(self):
         print('Adding indicators and signals to data.')
-
-        # Set proper data types
-        self.df['open'] = self.df['open'].astype(float)
-        self.df['high'] = self.df['high'].astype(float)
-        self.df['low'] = self.df['low'].astype(float)
-        self.df['close'] = self.df['close'].astype(float)
-        self.df['volume'] = self.df['volume'].astype(float)
 
         # Keep only this list of columns, delete all other columns
         # final_table_columns = ['pair', 'interval', 'open', 'high', 'low', 'close']
@@ -86,6 +92,10 @@ class MACD(BaseStrategy):
 
         # EMA - Exponential Moving Average 200
         self.df[self.ema_col_name] = talib.EMA(self.df['close'], timeperiod=self.EMA)
+
+        # ADX
+        self.df[self.adx_col_name] = \
+            talib.ADX(self.df['high'], self.df['low'], self.df['close'], timeperiod=self.ADX)
 
         # Identify the trend
         # self.df.loc[self.df['close'] > self.df[self.ema_col_name], 'trend'] = 'Up'
@@ -107,7 +117,8 @@ class MACD(BaseStrategy):
             (
                     (self.df['close'] > self.df[self.ema_col_name]) &  # price > ema200
                     (self.df['MACDSIG'] < 0) &  # macdsignal < 0
-                    (self.df['cross'] == -1)  # macdsignal crossed and is now under macd
+                    (self.df['cross'] == -1) & # macdsignal crossed and is now under macd
+                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'trade_status'] = TradeStatuses.EnterLong
 
@@ -116,7 +127,8 @@ class MACD(BaseStrategy):
             (
                     (self.df['close'] < self.df[self.ema_col_name]) &  # price < ema200
                     (self.df['MACDSIG'] > 0) &  # macdsignal > 0
-                    (self.df['cross'] == 1)  # macdsignal crossed and is now over macd
+                    (self.df['cross'] == 1) & # macdsignal crossed and is now over macd
+                    (self.df[self.adx_col_name] > self.ADX_THRESHOLD)  # ADX > ADX_THRESHOLD
             ),
             'trade_status'] = TradeStatuses.EnterShort
 
