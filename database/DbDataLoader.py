@@ -25,9 +25,7 @@ class DbDataLoader(BaseDbData):
             self.exchange.set_sandbox_mode(True)
         else:
             self.exchange.set_sandbox_mode(False)
-        self.exchange.options['defaultType'] = 'future'
         self.exchange.timeout = 300000  # number in milliseconds, default 10000
-        self.exchange.load_markets()
 
     def validate_interval(self, interval):
         valid_intervals = list(self.exchange.timeframes.keys())
@@ -45,6 +43,14 @@ class DbDataLoader(BaseDbData):
         """
             from_time: must be a datetime object
         """
+
+        if self.exchange_name == 'Binance' and pair.endswith('USD'):
+            pair = pair.replace('USD', '/USD')
+            self.exchange.options['defaultType'] = 'delivery'
+        else:
+            self.exchange.options['defaultType'] = 'future'
+        self.exchange.load_markets()
+
         self.validate_pair(pair)
         self.validate_interval(interval)
         # self.delete_all_pair_interval_data(pair, interval)
@@ -59,13 +65,19 @@ class DbDataLoader(BaseDbData):
                 # to_time_str = to_time.strftime('%Y-%m-%d')
                 print(f'Loading {pair} data from {self.exchange_name} into the [{table_name}] table.',
                       f'From[{dt.datetime.fromtimestamp(last_datetime_stamp / 1000)}] => ', end='')
+            try:
+                result = self.exchange.fetch_ohlcv(
+                    symbol=pair,
+                    timeframe=interval,
+                    since=int(last_datetime_stamp)
+                )
+                print('done.')
+            except Exception as e:
+                print('failed.')
+                print(f"load_candle_data(): pair={pair}, from_time={from_time}, interval={interval}.")
+                print(e)
+                return
 
-            result = self.exchange.fetch_ohlcv(
-                symbol=pair,
-                timeframe=interval,
-                since=int(last_datetime_stamp)
-            )
-            print('done.')
             df = pd.DataFrame(result, columns=['open_time', 'open', 'high', 'low', 'close', 'volume'])
             if df is None or (len(df.index) == 0):
                 break
@@ -102,7 +114,7 @@ class DbDataLoader(BaseDbData):
         """
             Returns the last candle timeframe in the database for this pair and interval
         """
-        table_name = f'Candles_{pair}_{interval}'
+        table_name = self.get_table_name(pair, interval)
         with self.engine.connect() as connection:
             if self.inspector.has_table(table_name, schema='public'):
                 table_name = f'public."{table_name}"'
@@ -124,7 +136,12 @@ class DbDataLoader(BaseDbData):
             if max_timestamp and isinstance(max_timestamp, int):
                 from_time = dt.datetime.fromtimestamp(max_timestamp/1000) + dt.timedelta(seconds=1)
             else:
-                from_time = dt.datetime(2000, 1, 1)
+                if self.exchange_name == 'Binance' and pair.endswith('USD'):
+                    # Cannot fetch more than 200 days. CCXT adds an end_time = today
+                    # Binance does not allow more than 200 days between start and end time
+                    from_time = dt.datetime.now() - dt.timedelta(days=200)
+                else:
+                    from_time = dt.datetime(2015, 1, 1)
             self.load_candle_data(pair, from_time, interval, True)
         exec_time = utils.format_execution_time(time.time() - execution_start)
         print(f'Load completed. Execution Time: {exec_time}\n')

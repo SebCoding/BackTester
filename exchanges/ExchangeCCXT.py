@@ -12,7 +12,7 @@ from Configuration import Configuration
 class ExchangeCCXT:
     NAME = None
 
-    def __init__(self, name):
+    def __init__(self, name, pair):
         self.config = Configuration.get_config()
         self.exchange = getattr(ccxt, name)()
         self.NAME = self.exchange.name
@@ -37,16 +37,23 @@ class ExchangeCCXT:
             # Mainnet
             self.exchange.set_sandbox_mode(False)
 
-        self.exchange.options['defaultType'] = 'future'
-        # Does not seem to work, TODO: adjustForTimeDifference
-        self.exchange.options['adjustForTimeDifference'] = False
         self.exchange.timeout = 300000  # number in milliseconds, default 10000
+
+        if self.exchange.name == 'Binance' and pair.endswith('USD'):
+            #pair = pair.replace('USD', '/USD')
+            self.exchange.options['defaultType'] = 'delivery'
+        else:
+            self.exchange.options['defaultType'] = 'future'
         self.exchange.load_markets()
 
     def get_candle_data(self, pair, from_time, to_time, interval, include_prior=0, write_to_file=True,
                         verbose=False):
         self.validate_pair(pair)
         self.validate_interval(interval)
+
+        if self.exchange.name == 'Binance' and pair.endswith("USD"):
+            pair = pair.replace('USD', '/USD')
+
 
         # Use locally saved data if it exists
         cached_df = self.get_cached_exchange_data(pair, from_time, to_time, interval, prior=include_prior)
@@ -128,7 +135,7 @@ class ExchangeCCXT:
             to_str = to_time.strftime('%Y-%m-%d')
         filename = f"{self.config['output']['historical_files_path']}\\{self.NAME} {pair} [{interval}] {from_str} to {to_str}"
         if prior > 0:
-            filename += " [-{prior}]"
+            filename += f" [-{prior}]"
         return filename
 
     def save_candle_data(self, pair, from_time, to_time, interval, df, prior=0, include_time=False, verbose=True):
@@ -172,14 +179,20 @@ class ExchangeCCXT:
             raise Exception(f'\nInvalid Interval [{interval}]. Expected values: {valid_intervals_str}')
 
     def validate_pair(self, pair):
+        if self.exchange.name == 'Binance' and pair.endswith("USD"):
+            pair = pair.replace('USD', '/USD')
         market = self.exchange.market(pair)
         if market is None:
             raise Exception(f'\nInvalid [{pair}] for exchange {self.NAME}.')
 
     def get_maker_fee(self, pair):
+        if self.exchange.name == 'Binance' and pair.endswith("USD"):
+            pair = pair.replace('USD', '/USD')
         market = self.exchange.market(pair)
         return market['maker']
 
     def get_taker_fee(self, pair):
+        if self.exchange.name == 'Binance' and pair.endswith("USD"):
+            pair = pair.replace('USD', '/USD')
         market = self.exchange.market(pair)
         return market['taker']

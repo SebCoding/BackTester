@@ -10,7 +10,7 @@ from database.DbDataLoader import DbDataLoader
 
 # Example 1: load pair data for 1 timeframe
 # pair = 'BTCUSDT'
-# loader = DbDataLoader('Bybit')
+# loader = DbDataLoader('Binance')
 # from_time = dt.datetime(2010, 1, 1)
 # interval = '1m'
 #
@@ -27,12 +27,15 @@ from database.DbDataLoader import DbDataLoader
 
 
 # Example 3: Load all pairs, for all exchanges
-exchanges = ['Binance', 'Bybit', 'Bybit_Testnet']
-pairs = ['BTCUSDT', 'ETHUSDT']
+exchanges = ['Binance', 'Bybit']
+pairs = ['BTCUSD', 'ETHUSD', 'BTCUSDT', 'ETHUSDT']
 for exchange in exchanges:
     for pair in pairs:
         loader = DbDataLoader(exchange)
         loader.load_pair_data_all_timeframes(pair)
+
+
+
 
 
 

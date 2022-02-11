@@ -146,3 +146,6 @@ class MACD(BaseStrategy):
 
         # Remove underscores from column names
         self.df = self.df.rename(columns=lambda name: name.replace('_', ' '))
+
+        if self.ADX_THRESHOLD <= 0:
+            del self.df[self.adx_col_name]

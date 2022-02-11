@@ -32,7 +32,7 @@ class BaseDbData:
     # Get the table name for this pair and interval
     @staticmethod
     def get_table_name(pair, interval):
-        return f'Candles_{pair}_{interval}'
+        return f"Candles_{pair.replace('/', '')}_{interval}"
 
     def exec_sql_query(self, query):
         connection = self.engine.connect()
