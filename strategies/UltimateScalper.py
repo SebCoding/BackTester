@@ -28,17 +28,17 @@ class UltimateScalper(BaseStrategy):
         'EMA_Slow': 55,
         'EMA_Trend': 200,
         # Momentum indicator: RSI - Relative Strength Index
-        'RSI': 2,
-        'RSI_Low': 48,
-        'RSI_High': 52,
+        'RSI': 4,
+        'RSI_Low': 19,
+        'RSI_High': 81,
         # ADX: Average Directional Index
         # Not initially in this strategy, but added as an optional parameter
-        'ADX': 3,
-        'ADX_Threshold': 0,  # set to 0 to disable ADX
+        'ADX': 17,
+        'ADX_Threshold': 24,  # set to 0 to disable ADX
         # Trend following momentum indicator:
         # MACD - Moving Average Convergence Divergence
         'MACD_Fast': 12,
-        'MACD_Slow': 26,
+        'MACD_Slow': 24,
         'MACD_Signal': 9,
         # Bollinger Bands around the MACD Histogram
         'BB_Length': 34,
@@ -177,7 +177,7 @@ class UltimateScalper(BaseStrategy):
             (
                     (self.df['EMA_Fast'] > self.df['EMA_Slow']) &
                     (self.df['EMA_Slow'] > self.df['EMA_Trend']) &
-                    (self.df['RSI'] > self.settings['RSI_High']) &
+                    (self.df['RSI'] > self.settings['RSI_Low']) &
                     (self.df['ADX'] > self.settings['ADX_Threshold']) &
                     (self.df['MACDHist'] <= self.df['BB_Lower'])
             ),
@@ -188,7 +188,7 @@ class UltimateScalper(BaseStrategy):
             (
                     (self.df['EMA_Fast'] < self.df['EMA_Slow']) &
                     (self.df['EMA_Slow'] < self.df['EMA_Trend']) &
-                    (self.df['RSI'] < self.settings['RSI_Low']) &
+                    (self.df['RSI'] < self.settings['RSI_High']) &
                     (self.df['ADX'] > self.settings['ADX_Threshold']) &
                     (self.df['MACDHist'] >= self.df['BB_Upper'])
             ),
