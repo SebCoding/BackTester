@@ -155,7 +155,7 @@ class UltimateScalper(BaseStrategy):
         self.df_1m['BB_Lower'] = self.df_1m['BB_Basis'] - self.df_1m['BB_Dev']
 
         # We use inner join here to trim rows at the beginning and the end where data is missing.
-        # Candle data does not start at the same point for all intervals
+        # Candle data does not end at the same point for all intervals
         new_df = self.df.reset_index().merge(self.df_1m[['end_time', 'MACDHist', 'BB_Upper', 'BB_Lower']],
                                              on="end_time", how='inner').set_index('index')
         del new_df['end_time']
