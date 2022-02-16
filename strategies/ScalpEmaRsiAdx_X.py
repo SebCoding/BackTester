@@ -7,7 +7,7 @@ import talib
 import constants
 import utils
 from Configuration import Configuration
-from enums.TradeTypes import TradeTypes
+from enums.TradeType import TradeType
 
 from strategies.BaseStrategy_X import BaseStrategy_X
 from strategies.ScalpEmaRsiAdx import ScalpEmaRsiAdx
@@ -93,7 +93,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
             # print()
 
             # Mark long entries
-            if trade_type == TradeTypes.Long:
+            if trade_type == TradeType.Long:
                 df2.loc[
                     (
                             (df2['close'] > df2['EMA_LONG']) &  # price > EMA
@@ -103,7 +103,7 @@ class ScalpEmaRsiAdx_X(BaseStrategy_X, ScalpEmaRsiAdx):
                     'enter'] = 1
 
             # Mark short entries
-            if trade_type == TradeTypes.Short:
+            if trade_type == TradeType.Short:
                 df2.loc[
                     (
                             (df2['close'] < df2['EMA_SHORT']) &  # price < EMA-50

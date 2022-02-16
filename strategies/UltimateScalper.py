@@ -38,7 +38,7 @@ class UltimateScalper(BaseStrategy):
         # Trend following momentum indicator:
         # MACD - Moving Average Convergence Divergence
         'MACD_Fast': 12,
-        'MACD_Slow': 24,
+        'MACD_Slow': 26,
         'MACD_Signal': 9,
         # Bollinger Bands around the MACD Histogram
         'BB_Length': 34,

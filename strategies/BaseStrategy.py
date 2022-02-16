@@ -1,7 +1,4 @@
-"""
-    Base Abstract Strategy Class.
-    All strategies inherit from this class and must implement the abstract methods of this class
-"""
+
 import math
 import sys
 from abc import ABC, abstractmethod
@@ -15,6 +12,8 @@ import rapidjson
 import constants
 from Configuration import Configuration
 from database.DbDataReader import DbDataReader
+from enums.ExitType import ExitType
+from enums.TradeType import TradeType
 from exchanges.ExchangeCCXT import ExchangeCCXT
 from stats import stats_utils
 import utils
@@ -27,6 +26,16 @@ from exchanges.Bybit import Bybit
 
 
 class BaseStrategy(ABC):
+    """
+        Base Abstract Strategy Class.
+        All strategies inherit from this class and must implement the abstract methods of this class
+
+        The following logic is used to emulate order fills:
+            - If the bar’s high is closer to bar’s open than the bar’s low,
+              we assume that intrabar price was moving this way: open → high → low → close.
+            - If the bar’s low is closer to bar’s open than the bar’s high,
+              we assume that intrabar price was moving this way: open → low → high → close.
+    """
     NAME = 'abstract'
 
     # Used to output on console a dot for each trade processed.
@@ -116,6 +125,32 @@ class BaseStrategy(ABC):
             staked_amount = math.floor(staked_amount / (1 + self.TAKER_FEE_PCT))
             entry_fee = self.get_entry_fee(staked_amount)
         return staked_amount, entry_fee
+
+    @staticmethod
+    def get_exit_type(side, _open, high, low, tp, sl):
+        """
+            When stop_loss and take_profit are both happening in the same candle, if sl is closer to open price it is
+            executed first. If open is closer to high the tp is executed first.
+        """
+        if side == TradeType.Long:
+            if high >= tp and low <= sl:
+                if abs(_open - low) < abs(high - _open):
+                    return ExitType.StopLoss
+                return ExitType.TakeProfit
+            elif high >= tp:
+                return ExitType.TakeProfit
+            elif low <= sl:
+                return ExitType.StopLoss
+        elif side == TradeType.Short:
+            if high >= sl and low <= tp:
+                if abs(_open - low) > abs(high - _open):
+                    return ExitType.StopLoss
+                return ExitType.TakeProfit
+            elif high >= sl:
+                return ExitType.StopLoss
+            elif low <= tp:
+                return ExitType.TakeProfit
+        return None
 
     # Step 0: Get candle data used to backtest the strategy
     def get_candle_data(self):
@@ -214,15 +249,16 @@ class BaseStrategy(ABC):
 
         # Previous row in a long
         elif prev_row['trade_status'] in [TradeStatuses.EnterLong, TradeStatuses.Long]:
+            exit_type = self.get_exit_type(TradeType.Long, curr_row['open'], curr_row['high'], curr_row['low'], prev_row['take_profit'], prev_row['stop_loss'])
             # Exit by stop loss
-            if curr_row['low'] <= prev_row['stop_loss']:
+            if exit_type == ExitType.StopLoss:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] - loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
             # Exit by take profit
-            elif curr_row['high'] >= prev_row['take_profit']:
+            elif exit_type == ExitType.TakeProfit:
                 win = prev_row['staked_amount'] * self.TP_PCT
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
@@ -235,15 +271,17 @@ class BaseStrategy(ABC):
 
         # Previous row in a short
         elif prev_row['trade_status'] in [TradeStatuses.EnterShort, TradeStatuses.Short]:
+            exit_type = self.get_exit_type(TradeType.Short, curr_row['open'], curr_row['high'], curr_row['low'],
+                                           prev_row['take_profit'], prev_row['stop_loss'])
             # Exit by stop loss
-            if curr_row['high'] >= prev_row['stop_loss']:
+            if exit_type == ExitType.StopLoss:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] + loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
             # Exit by take profit
-            elif curr_row['low'] <= prev_row['take_profit']:
+            elif exit_type == ExitType.TakeProfit:
                 win = prev_row['staked_amount'] * self.TP_PCT
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee

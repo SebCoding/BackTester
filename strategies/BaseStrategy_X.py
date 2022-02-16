@@ -10,7 +10,7 @@ import pandas as pd
 
 import utils
 from enums.TradeStatus import TradeStatuses
-from enums.TradeTypes import TradeTypes
+from enums.TradeType import TradeType
 from strategies.BaseStrategy import BaseStrategy
 
 
@@ -82,7 +82,7 @@ class BaseStrategy_X(BaseStrategy):
                     self.df[['high', 'low', 'close']].iloc[0:i],
                     start_time,
                     end_time,
-                    TradeTypes.Long
+                    TradeType.Long
                 )
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
@@ -187,7 +187,7 @@ class BaseStrategy_X(BaseStrategy):
                     self.df[['high', 'low', 'close']].iloc[0:i],
                     start_time,
                     end_time,
-                    TradeTypes.Short
+                    TradeType.Short
                 )
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
@@ -223,7 +223,7 @@ class BaseStrategy_X(BaseStrategy):
                     self.df[['high', 'low', 'close']].iloc[0:i],
                     start_time,
                     end_time,
-                    TradeTypes.Short
+                    TradeType.Short
                 )
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
@@ -331,7 +331,7 @@ class BaseStrategy_X(BaseStrategy):
                     self.df[['high', 'low', 'close']].iloc[0:i],
                     start_time,
                     end_time,
-                    TradeTypes.Long
+                    TradeType.Long
                 )
                 self.df.iloc[i, entry_time_col_index] = entry_time.strftime('%H:%M')
                 self.df.iloc[i, entry_price_col_index] = entry_price
