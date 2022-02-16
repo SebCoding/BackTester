@@ -22,10 +22,10 @@ VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h'
 # VALID_INTERVALS = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w', '1M']
 
 # Implemented Strategies
-IMPLEMENTED_STRATEGIES = ['MACD_BB_Freeman', 'MACD', 'MACD_X', 'ScalpEmaRsiAdx', 'ScalpEmaRsiAdx_X', 'UltimateScalper']
+VALID_STRATEGIES = ['HA_VWAP', 'MACD_BB_Freeman', 'MACD', 'MACD_X', 'ScalpEmaRsiAdx', 'ScalpEmaRsiAdx_X', 'UltimateScalper']
 
 # Implemented Exit Strategies
-IMPLEMENTED_EXIT_STRATEGIES = ['FixedPCT', 'ExitOnNextEntry']
+VALID_EXIT_STRATEGIES = ['FixedPCT', 'ExitOnNextEntry', 'VWAP_Touch']
 
 # JSON configuration schema to validate the config.json file
 CONFIG_SCHEMA = {

@@ -61,7 +61,7 @@ class BaseStrategy(ABC):
         if self.config['database']['historical_data_stored_in_db']:
             self.db_reader = DbDataReader(self.exchange.NAME)
             self.db_engine = self.db_reader.engine
-
+        self.validate_exit_strategy()
         # Used within decorators to access previous row when processing trades
         self.prev_row = {}
 
@@ -73,6 +73,12 @@ class BaseStrategy(ABC):
         self.validate_trades()  # Step 4
         self.save_trades_to_file()  # Step 5
         self.finalize_stats()  # Step 6
+
+    # To be redefined on subclasses
+    def validate_exit_strategy(self):
+        if self.params["Exit_Strategy"] not in ['FixedPCT', 'ExitOnNextEntry']:
+            print(f'Exit strategy ({self.params["Exit_Strategy"]}) not supported by {self.params["Strategy"]}.')
+            sys.exit(1)
 
     # Calculate indicator values required to determine long/short signals
     @abstractmethod

@@ -67,10 +67,10 @@ def validate_params(params):
         raise Exception(
             f'Invalid Parameter: Stop_Loss_PCT = [{stop_loss_pct}]. Must be a positive value of type float.')
 
-    if params['Strategy'] not in constants.IMPLEMENTED_STRATEGIES:
+    if params['Strategy'] not in constants.VALID_STRATEGIES:
         raise Exception(f'Invalid Parameter: Unsupported Strategy = [{params["Strategy"]}]')
 
-    if params['Exit_Strategy'] not in constants.IMPLEMENTED_EXIT_STRATEGIES:
+    if params['Exit_Strategy'] not in constants.VALID_EXIT_STRATEGIES:
         raise Exception(f'Invalid Parameter: Unsupported Exit Strategy = [{params["Exit_Strategy"]}]')
 
     if params['StrategySettings'] and not isinstance(params['StrategySettings'], dict):

@@ -14,6 +14,7 @@ from strategies.MACD_X import MACD_X
 from strategies.ScalpEmaRsiAdx import ScalpEmaRsiAdx
 from strategies.ScalpEmaRsiAdx_X import ScalpEmaRsiAdx_X
 from strategies.UltimateScalper import UltimateScalper
+from strategies.HA_VWAP import HA_VWAP
 
 # Ignore warnings when reading xlsx file containing list of values for dropdown
 from stats import stats_utils
