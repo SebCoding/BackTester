@@ -368,15 +368,18 @@ class BaseStrategy(ABC):
                     account_balance = account_balance - (staked_amount + entry_fee)
                 return TradeStatuses.EnterShort, curr_row[
                     'close'], take_profit, stop_loss, account_balance, staked_amount, win, loss, entry_fee, exit_fee
+
+            exit_type = self.get_exit_type(TradeType.Long, curr_row['open'], curr_row['high'], curr_row['low'],
+                                           prev_row['take_profit'], prev_row['stop_loss'])
             # Exit by stop loss
-            if curr_row['low'] <= prev_row['stop_loss']:
+            if exit_type == ExitType.StopLoss:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] - loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
             # Exit by take profit
-            elif curr_row['high'] >= prev_row['take_profit']:
+            elif exit_type == ExitType.TakeProfit:
                 win = prev_row['staked_amount'] * self.TP_PCT
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
@@ -415,15 +418,18 @@ class BaseStrategy(ABC):
                     account_balance = account_balance - (staked_amount + entry_fee)
                 return TradeStatuses.EnterLong, curr_row[
                     'close'], take_profit, stop_loss, account_balance, staked_amount, win, loss, entry_fee, exit_fee
+
+            exit_type = self.get_exit_type(TradeType.Short, curr_row['open'], curr_row['high'], curr_row['low'],
+                                           prev_row['take_profit'], prev_row['stop_loss'])
             # Exit by stop loss
-            if curr_row['high'] >= prev_row['stop_loss']:
+            if exit_type == ExitType.StopLoss:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] + loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
             # Exit by take profit
-            elif curr_row['low'] <= prev_row['take_profit']:
+            elif exit_type == ExitType.TakeProfit:
                 win = prev_row['staked_amount'] * self.TP_PCT
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
