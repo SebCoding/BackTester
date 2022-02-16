@@ -29,7 +29,7 @@ class HA_VWAP(BaseStrategy):
         # Set to 0 to disable
         'EMA': 200,
         'DistVWAP_PCT': 0.05,
-        'NB_SIGNALS': 2  # Values must be: 1, 2, 3
+        'NB_SIGNALS': 2  # Values must be: 1, 2, 3, 4
     }
 
     # Cannot run Strategy on datasets less than this value
@@ -42,7 +42,7 @@ class HA_VWAP(BaseStrategy):
         # Used within decorator to access previous row when calculating Heikin Ashi
         self.prev_row_ha = {}
 
-        if self.settings['NB_SIGNALS'] not in [1, 2, 3]:
+        if self.settings['NB_SIGNALS'] not in [1, 2, 3, 4]:
             print(f"Invalid value: {self.settings['NB_SIGNALS']} for NB_SIGNALS.")
             sys.exit(1)
 
@@ -196,6 +196,23 @@ class HA_VWAP(BaseStrategy):
                     (self.df['signal'] == -1) &
                     (self.df['signal'].shift(1) == -1) &
                     (self.df['signal'].shift(2) == -1)
+                ),
+                'trade_status'] = TradeStatuses.EnterShort
+        elif self.settings['NB_SIGNALS'] == 4:
+            self.df.loc[
+                (
+                    (self.df['signal'] == 1) &
+                    (self.df['signal'].shift(1) == 1) &
+                    (self.df['signal'].shift(2) == 1) &
+                    (self.df['signal'].shift(3) == 1)
+                ),
+                'trade_status'] = TradeStatuses.EnterLong
+            self.df.loc[
+                (
+                    (self.df['signal'] == -1) &
+                    (self.df['signal'].shift(1) == -1) &
+                    (self.df['signal'].shift(2) == -1) &
+                    (self.df['signal'].shift(3) == -11)
                 ),
                 'trade_status'] = TradeStatuses.EnterShort
 
