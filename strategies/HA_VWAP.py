@@ -104,7 +104,7 @@ class HA_VWAP(BaseStrategy):
         self.df['EMA'] = talib.EMA(self.df['close'], timeperiod=self.settings['EMA'])
 
         # Drop rows with no EMA (usually first 200 rows for EMA200)
-        #self.df.dropna(subset=['EMA'], how='all', inplace=True)
+        self.df.dropna(subset=['EMA'], how='all', inplace=True)
 
         # VWAP: Volume-Weighted Average Price
         self.df = self.df.groupby(self.df.index.date, group_keys=False).apply(self.vwap)
@@ -298,18 +298,32 @@ class HA_VWAP(BaseStrategy):
         elif prev_row['trade_status'] in [TradeStatuses.EnterLong, TradeStatuses.Long]:
             exit_type = self.get_exit_type(TradeType.Long, curr_row['open'], curr_row['high'], curr_row['low'],
                                            prev_row['take_profit'], prev_row['stop_loss'])
-            # Exit by stop loss or by crossing VWAP (loss)
-            if exit_type == ExitType.StopLoss or \
-                    (curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']):
+            # Exit by stop loss
+            if exit_type == ExitType.StopLoss:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] - loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
-            # Exit by take profit or by crossing VWAP (win)
-            elif exit_type == ExitType.TakeProfit or \
-                    (curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']):
+            # Exit by take profit
+            elif exit_type == ExitType.TakeProfit:
                 win = prev_row['staked_amount'] * self.TP_PCT
+                exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
+                account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
+                return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, win, 0, 0, exit_fee
+            # Exit by crossing VWAP (loss)
+            elif curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']:
+                loss = (curr_row['close'] - prev_row['entry_price']) / prev_row['entry_price'] * prev_row[
+                    'staked_amount']
+                exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] - loss)
+                account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
+                return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
+            # Exit by crossing VWAP (win)
+            elif curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']:
+                win = (curr_row['close'] - prev_row['entry_price']) / prev_row['entry_price'] * prev_row[
+                    'staked_amount']
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
                 return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
@@ -323,18 +337,32 @@ class HA_VWAP(BaseStrategy):
         elif prev_row['trade_status'] in [TradeStatuses.EnterShort, TradeStatuses.Short]:
             exit_type = self.get_exit_type(TradeType.Short, curr_row['open'], curr_row['high'], curr_row['low'],
                                            prev_row['take_profit'], prev_row['stop_loss'])
-            # Exit by stop loss or by crossing VWAP (loss)
-            if exit_type == ExitType.StopLoss or \
-                    (curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']):
+            # Exit by stop loss
+            if exit_type == ExitType.StopLoss:
                 loss = prev_row['staked_amount'] * self.SL_PCT * -1
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] + loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
-            # Exit by take profit or by crossing VWAP (win)
-            elif exit_type == ExitType.TakeProfit or \
-                    (curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']):
+            # Exit by take profit
+            elif exit_type == ExitType.TakeProfit:
                 win = prev_row['staked_amount'] * self.TP_PCT
+                exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
+                account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
+                return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, win, 0, 0, exit_fee
+            # Exit by crossing VWAP (loss)
+            elif curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']:
+                loss = (prev_row['entry_price'] - curr_row['close']) / prev_row['entry_price'] * prev_row[
+                    'staked_amount']
+                exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] + loss)
+                account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
+                return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
+                    'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
+            # Exit by crossing VWAP (win)
+            elif curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']:
+                win = (prev_row['entry_price'] - curr_row['close']) / prev_row['entry_price'] * prev_row[
+                    'staked_amount']
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
                 return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
