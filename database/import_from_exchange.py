@@ -27,7 +27,7 @@ from database.DbDataLoader import DbDataLoader
 
 
 # Example 3: Load all pairs, for all exchanges
-exchanges = ['Bybit']
+exchanges = ['Binance', 'Bybit']
 pairs = ['BTCUSDT', 'ETHUSDT']
 for exchange in exchanges:
     for pair in pairs:

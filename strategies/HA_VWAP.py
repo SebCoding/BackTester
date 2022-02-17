@@ -29,7 +29,8 @@ class HA_VWAP(BaseStrategy):
         # Set to 0 to disable
         'EMA': 200,
         'DistVWAP_PCT': 0.05,
-        'NB_SIGNALS': 2  # Values must be: 1, 2, 3, 4
+        'Nb_Signals': 2,  # Values must be: 1, 2, 3, 4
+        'ExitOnEmaCross': False
     }
 
     # Cannot run Strategy on datasets less than this value
@@ -42,8 +43,8 @@ class HA_VWAP(BaseStrategy):
         # Used within decorator to access previous row when calculating Heikin Ashi
         self.prev_row_ha = {}
 
-        if self.settings['NB_SIGNALS'] not in [1, 2, 3, 4]:
-            print(f"Invalid value: {self.settings['NB_SIGNALS']} for NB_SIGNALS.")
+        if self.settings['Nb_Signals'] not in [1, 2, 3, 4]:
+            print(f"Invalid value: {self.settings['Nb_Signals']} for Nb_Signals.")
             sys.exit(1)
 
     def validate_exit_strategy(self):
@@ -64,7 +65,8 @@ class HA_VWAP(BaseStrategy):
                 self.settings[k] = _settings[k]
 
     def get_strategy_text_details(self):
-        details = details = f"EMA({self.settings['EMA']}), DistVWAP_PCT({self.settings['DistVWAP_PCT']}), "
+        details = details = f"EMA({self.settings['EMA']}), DistVWAP_PCT({self.settings['DistVWAP_PCT']}), " \
+                            f"ExitOnEmaCross({self.settings['ExitOnEmaCross']})"
         details += f'Entry_As_Maker({self.ENTRY_AS_MAKER}), Exit({self.params["Exit_Strategy"]})'
         return details
 
@@ -167,10 +169,10 @@ class HA_VWAP(BaseStrategy):
         print('Adding entry points for all trades.')
         self.df.loc[:, 'trade_status'] = None
 
-        if self.settings['NB_SIGNALS'] == 1:
+        if self.settings['Nb_Signals'] == 1:
             self.df.loc[(self.df['signal'] == 1), 'trade_status'] = TradeStatuses.EnterLong
             self.df.loc[(self.df['signal'] == -1), 'trade_status'] = TradeStatuses.EnterShort
-        elif self.settings['NB_SIGNALS'] == 2:
+        elif self.settings['Nb_Signals'] == 2:
             self.df.loc[
                 (
                     (self.df['signal'] == 1) &
@@ -183,7 +185,7 @@ class HA_VWAP(BaseStrategy):
                     (self.df['signal'].shift(1) == -1)
                 ),
                 'trade_status'] = TradeStatuses.EnterShort
-        elif self.settings['NB_SIGNALS'] == 3:
+        elif self.settings['Nb_Signals'] == 3:
             self.df.loc[
                 (
                     (self.df['signal'] == 1) &
@@ -198,7 +200,7 @@ class HA_VWAP(BaseStrategy):
                     (self.df['signal'].shift(2) == -1)
                 ),
                 'trade_status'] = TradeStatuses.EnterShort
-        elif self.settings['NB_SIGNALS'] == 4:
+        elif self.settings['Nb_Signals'] == 4:
             self.df.loc[
                 (
                     (self.df['signal'] == 1) &
@@ -329,16 +331,22 @@ class HA_VWAP(BaseStrategy):
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
                 return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, win, 0, 0, exit_fee
-            # Exit by crossing VWAP (loss)
-            elif curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']:
+            # Exit by crossing VWAP (loss) or by EMA cross (loss)
+            elif (curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']) or \
+                    (self.settings['ExitOnEmaCross']
+                     and curr_row['close'] < curr_row['EMA']
+                     and curr_row['close'] <= prev_row['entry_price']):
                 loss = (curr_row['close'] - prev_row['entry_price']) / prev_row['entry_price'] * prev_row[
                     'staked_amount']
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] - loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitLong, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
-            # Exit by crossing VWAP (win)
-            elif curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']:
+            # Exit by crossing VWAP (win) or by EMA cross (win)
+            elif (curr_row['close'] >= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']) or \
+                    (self.settings['ExitOnEmaCross']
+                     and curr_row['close'] < curr_row['EMA']
+                     and curr_row['close'] <= prev_row['entry_price']):
                 win = (curr_row['close'] - prev_row['entry_price']) / prev_row['entry_price'] * prev_row[
                     'staked_amount']
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
@@ -368,16 +376,22 @@ class HA_VWAP(BaseStrategy):
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + win - exit_fee
                 return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, win, 0, 0, exit_fee
-            # Exit by crossing VWAP (loss)
-            elif curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']:
+            # Exit by crossing VWAP (loss) or by EMA cross (loss)
+            elif (curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] >= prev_row['entry_price']) or \
+                    (self.settings['ExitOnEmaCross']
+                     and curr_row['close'] > curr_row['EMA']
+                     and curr_row['close'] >= prev_row['entry_price']):
                 loss = (prev_row['entry_price'] - curr_row['close']) / prev_row['entry_price'] * prev_row[
                     'staked_amount']
                 exit_fee = self.get_stop_loss_fee(prev_row['staked_amount'] + loss)
                 account_balance = prev_row['wallet'] + prev_row['staked_amount'] + loss - exit_fee
                 return TradeStatuses.ExitShort, prev_row['entry_price'], prev_row['take_profit'], prev_row[
                     'stop_loss'], account_balance, 0, 0, loss, 0, exit_fee
-            # Exit by crossing VWAP (win)
-            elif curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']:
+            # Exit by crossing VWAP (win) or by EMA cross (win)
+            elif (curr_row['close'] <= curr_row['VWAP'] and curr_row['close'] <= prev_row['entry_price']) or \
+                    (self.settings['ExitOnEmaCross']
+                     and curr_row['close'] > curr_row['EMA']
+                     and curr_row['close'] <= prev_row['entry_price']):
                 win = (prev_row['entry_price'] - curr_row['close']) / prev_row['entry_price'] * prev_row[
                     'staked_amount']
                 exit_fee = self.get_take_profit_fee(prev_row['staked_amount'] + win)
